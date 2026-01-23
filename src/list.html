@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Список вкладок</title>
+        <style>
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: sans-serif;
+                line-height: 1.5;
+                background: #fff;
+                color: #333;
+            }
+
+            h1 {
+                text-align: center;
+                padding: 15px;
+                margin: 0;
+                background: #f3f3f3;
+                border-bottom: 1px solid #ddd;
+                font-size: 1.5em;
+            }
+
+            .container {
+                max-width: 100%;
+                overflow-x: auto;
+                height: calc(100vh - 60px);
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed; /* равномерное распределение столбцов */
+            }
+
+            th,
+            td {
+                padding: 10px;
+                border-bottom: 1px solid #eee;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            th {
+                background-color: #f5f5f5;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                box-shadow: 0 1px 0 #ddd;
+            }
+
+            /* Столбцы: пропорции */
+            th:nth-child(1),
+            td:nth-child(1) {
+                width: 25%;
+            } /* Название */
+            th:nth-child(2),
+            td:nth-child(2) {
+                width: 50%;
+            } /* URL */
+            th:nth-child(3),
+            td:nth-child(3) {
+                width: 15%;
+            } /* Окно */
+            th:nth-child(4),
+            td:nth-child(4) {
+                width: 10%;
+                text-align: center;
+            } /* Действие */
+
+            /* Перенос и ограничение текста */
+            .title,
+            .url {
+                word-wrap: break-word;
+                word-break: break-word;
+                white-space: pre-wrap; /* Сохраняет пробелы и переносы */
+                font-size: 0.95em;
+                line-height: 1.4;
+            }
+
+            .title {
+                font-weight: 500;
+            }
+
+            .url {
+                font-family: monospace;
+                color: #2c3e50;
+            }
+
+            .window {
+                font-size: 0.9em;
+                color: #555;
+                white-space: nowrap;
+            }
+
+            .close-btn {
+                padding: 6px 10px;
+                background: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.9em;
+            }
+
+            .close-btn:hover {
+                background: #c0392b;
+            }
+
+            .empty {
+                text-align: center;
+                padding: 30px;
+                color: #888;
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Открытые вкладки</h1>
+
+        <!-- Панель фильтра и счётчик -->
+        <div
+            style="
+                padding: 15px;
+                background: #f9f9f9;
+                border-bottom: 1px solid #eee;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+            "
+        >
+            <div style="flex: 1; min-width: 200px">
+                <input
+                    type="text"
+                    id="filterInput"
+                    placeholder="Фильтр по названию или URL..."
+                    style="
+                        width: 100%;
+                        padding: 8px;
+                        font-size: 14px;
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                    "
+                />
+            </div>
+            <div
+                id="countInfo"
+                style="font-size: 14px; color: #555; white-space: nowrap"
+            >
+                Загрузка...
+            </div>
+            <div style="display: flex; gap: 8px">
+                <button
+                    id="exportCsv"
+                    style="
+                        padding: 8px 12px;
+                        font-size: 14px;
+                        background: #27ae60;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    "
+                >
+                    📄 Экспорт CSV
+                </button>
+                <button
+                    id="exportJson"
+                    style="
+                        padding: 8px 12px;
+                        font-size: 14px;
+                        background: #3498db;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    "
+                >
+                    📦 Экспорт JSON
+                </button>
+            </div>
+        </div>
+
+        <!-- Таблица -->
+        <div class="container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>URL</th>
+                        <th>Окно</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody id="tabs-body">
+                    <tr>
+                        <td colspan="4" class="empty">Загрузка...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <script src="list.js"></script>
+    </body>
+</html>

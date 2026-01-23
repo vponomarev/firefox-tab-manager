@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "Tab & History Manager",
+  "version": "1.3",
+  "description": "Manage tabs and history",
+  "permissions": ["tabs", "history"],
+  "web_accessible_resources": [
+    "list.html",
+    "list.js",
+    "history.html",
+    "history.js"
+  ],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Tabs & History Manager"
+  },
+  "icons": {
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}

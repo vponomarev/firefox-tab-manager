@@ -12,7 +12,14 @@
     "history.html",
     "history.js"
   ],
-  "data_collection_permissions": { "required":  ["none"] },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "@firefox-tab-manager",
+      "data_collection_permissions": {
+        "required":  ["none"]
+      }
+    }
+  },
   "browser_action": {
     "default_popup": "popup.html",
     "default_title": "Tabs & History Manager"

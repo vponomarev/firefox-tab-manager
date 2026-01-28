@@ -12,6 +12,7 @@
     "history.html",
     "history.js"
   ],
+  "data_collection_permissions": "none required",
   "browser_action": {
     "default_popup": "popup.html",
     "default_title": "Tabs & History Manager"

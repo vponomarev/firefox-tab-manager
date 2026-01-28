@@ -50,14 +50,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (duplicates.length === 0) {
-        status.textContent = "✅ Нет дублей!";
+        status.textContent = "✅ No duplicate pages!";
       } else {
         await browser.tabs.remove(duplicates);
-        status.textContent = `✅ Удалено: ${duplicates.length} дублей`;
+        status.textContent = `✅ Closed: ${duplicates.length} duplicated pages`;
       }
     } catch (error) {
       console.error(error);
-      status.textContent = "❌ Ошибка";
+      status.textContent = "❌ Error";
     }
   });
 });

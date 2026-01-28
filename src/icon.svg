@@ -1,0 +1,21 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+    <!-- Фон -->
+    <rect width="128" height="128" rx="25" fill="#2B579A"/>
+
+    <!-- Вкладка 1 (неактивная) -->
+    <path d="M30 40 H70 V50 H30 Z" fill="white" fill-opacity="0.9"/>
+    <path d="M30 40 V50" stroke="white" stroke-width="2" stroke-opacity="0.6"/>
+
+    <!-- Вкладка 2 (неактивная) -->
+    <path d="M50 50 H90 V60 H50 Z" fill="white" fill-opacity="0.8"/>
+    <path d="M50 50 V60" stroke="white" stroke-width="2" stroke-opacity="0.5"/>
+
+    <!-- Вкладка 3 (активная, нижняя) -->
+    <path d="M30 70 H90 V90 H30 Z" fill="white"/>
+
+    <!-- Значок истории (часы) в правом верхнем углу -->
+    <circle cx="100" cy="28" r="12" fill="white" fill-opacity="0.9"/>
+    <circle cx="100" cy="28" r="6" fill="none" stroke="#2B579A" stroke-width="2"/>
+    <line x1="100" y1="28" x2="100" y2="20" stroke="#2B579A" stroke-width="2"/>
+    <line x1="100" y1="28" x2="106" y2="28" stroke="#2B579A" stroke-width="2"/>
+</svg>

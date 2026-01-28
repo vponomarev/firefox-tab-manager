@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Сначала получаем окна
     const windows = await browser.windows.getAll();
     windowMap = new Map(
-      windows.map((win) => [win.id, win.incognito ? "Приватное" : "Обычное"]),
+      windows.map((win) => [win.id, win.incognito ? "Private" : "Common"]),
     );
 
     // Затем вкладки
@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderTable(filteredTabs);
     updateCount();
   } catch (error) {
-    console.error("Ошибка загрузки вкладок:", error);
+    console.error("Error loading TABs:", error);
     tbody.innerHTML = `<tr><td colspan="4" class="empty">Ошибка: ${error.message}</td></tr>`;
     return;
   }
@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     tbody.innerHTML = "";
     if (tabs.length === 0) {
       tbody.innerHTML =
-        '<tr><td colspan="4" class="empty">Нет вкладок по фильтру</td></tr>';
+        '<tr><td colspan="4" class="empty">No match found</td></tr>';
       return;
     }
 
@@ -75,13 +75,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       // Окно
       const tdWindow = document.createElement("td");
       tdWindow.className = "window";
-      const windowType = windowMap.get(tab.windowId) || "Неизвестно";
+      const windowType = windowMap.get(tab.windowId) || "Unknown";
       tdWindow.textContent = `Окно ${tab.windowId} (${windowType})`;
 
       // Кнопка "Закрыть"
       const tdAction = document.createElement("td");
       const closeBtn = document.createElement("button");
-      closeBtn.textContent = "Закрыть";
+      closeBtn.textContent = "Close";
       closeBtn.className = "close-btn";
       closeBtn.addEventListener("click", async () => {
         try {
@@ -89,8 +89,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           tr.remove();
           updateCount();
         } catch (err) {
-          console.error("Ошибка при закрытии:", err);
-          alert("Не удалось закрыть вкладку");
+          console.error("Error closing:", err);
+          alert("Unable to close TAB");
         }
       });
       tdAction.appendChild(closeBtn);
@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function updateCount() {
     const total = allTabs.length;
     const shown = filteredTabs.length;
-    countInfo.textContent = `Показано: ${shown} / Всего: ${total}`;
+    countInfo.textContent = `Show: ${shown} / Total: ${total}`;
   }
 
   // === ФИЛЬТРАЦИЯ ===
@@ -130,10 +130,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   exportCsvBtn.addEventListener("click", () => {
     const data = filteredTabs;
     const csv = [
-      ["Название", "URL", "Окно ID", "Тип окна", "Индекс"].join(";"),
+      ["Title", "URL", "Window ID", "Window type", "Index"].join(";"),
     ];
     data.forEach((tab) => {
-      const windowType = windowMap.get(tab.windowId) || "Неизвестно";
+      const windowType = windowMap.get(tab.windowId) || "Unknown";
       const row = [
         `"${(tab.title || "").replace(/"/g, '""')}"`,
         `"${tab.url || ""}"`,
@@ -170,7 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `вкладки_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `tabs_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   });

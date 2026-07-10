@@ -26,9 +26,8 @@ by URL and carries timestamps, which is the groundwork for planned features.
 
 ## Roadmap
 
-- Full-text search across the visit log.
-- Cross-device sync (records already carry `lastVisit` for last-write-wins
-  merges).
+Full-text search over the visit log and self-hosted cross-device sync — see
+[ROADMAP.md](ROADMAP.md) for the plan, phases, and sync server design.
 
 ## Permissions
 

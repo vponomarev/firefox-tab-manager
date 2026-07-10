@@ -1,22 +1,20 @@
 {
   "manifest_version": 2,
   "name": "Tab & History Manager",
-  "version": "0.2",
+  "version": "0.3",
   "author": "Vitaliy Ponomarev",
   "homepage_url": "https://github.com/vponomarev/firefox-tab-manager",
-  "description": "Manage tabs and history",
-  "permissions": ["tabs", "history"],
-  "web_accessible_resources": [
-    "list.html",
-    "list.js",
-    "history.html",
-    "history.js"
-  ],
+  "description": "Manage tabs, browse history, and keep a searchable log of visited pages",
+  "permissions": ["tabs", "history", "storage"],
+  "background": {
+    "scripts": ["storage.js", "background.js"],
+    "persistent": true
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "@firefox-tab-manager",
       "data_collection_permissions": {
-        "required":  ["none"]
+        "required": ["none"]
       }
     }
   },

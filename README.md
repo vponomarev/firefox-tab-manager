@@ -1,6 +1,51 @@
-# Extension can be added via firefox debugging mode
+# Firefox Tab & History Manager
 
-1. Open page:
-about:debugging#/runtime/this-firefox
+A Firefox extension to manage open tabs, browse history, and keep a searchable
+log of visited pages.
 
-2. Click "Load Temporary Add-on"
+## Features
+
+- **Close duplicates** — close duplicate tabs in the current window (keeps the
+  last one, skips pinned tabs).
+- **Show all tabs** — a full-page table of every open tab across all windows,
+  with live updates, filtering, click-to-focus, per-tab close, and CSV/JSON
+  export.
+- **History** — a searchable view of Firefox browsing history (full range, not
+  just the last 24h) with CSV/JSON export.
+- **Tracked pages** — the extension's own log of visited pages, recorded in the
+  background into `browser.storage.local`. Each entry keeps the title, URL,
+  first/last visit timestamps and a visit counter. Searchable, exportable, with
+  per-entry delete and "clear all".
+
+## Why a separate visit log?
+
+Firefox's `history` API is limited (e.g. `history.search` defaults to the last
+24 hours). The background tracker (`background.js` + `storage.js`) maintains an
+independent, persistent log so pages can be searched later. The store is keyed
+by URL and carries timestamps, which is the groundwork for planned features.
+
+## Roadmap
+
+- Full-text search across the visit log.
+- Cross-device sync (records already carry `lastVisit` for last-write-wins
+  merges).
+
+## Permissions
+
+- `tabs` — enumerate/close/focus tabs.
+- `history` — read Firefox browsing history.
+- `storage` — persist the visit log locally.
+
+No data leaves the browser (`data_collection_permissions: none`).
+
+## Development install
+
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on**
+3. Select `src/manifest.json`
+
+## Build
+
+```sh
+./build.sh   # produces firefox-tab-manager.zip from src/
+```

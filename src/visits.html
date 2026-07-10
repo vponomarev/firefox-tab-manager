@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Browsing history</title>
+        <title>Visited pages</title>
         <style>
             * {
                 box-sizing: border-box;
@@ -52,14 +52,16 @@
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
+                color: white;
             }
-            .controls #exportCsv {
+            #exportCsv {
                 background: #27ae60;
-                color: white;
             }
-            .controls #exportJson {
+            #exportJson {
                 background: #3498db;
-                color: white;
+            }
+            #clearAll {
+                background: #e74c3c;
             }
             .container {
                 max-width: 100%;
@@ -87,20 +89,33 @@
             }
             th:nth-child(1),
             td:nth-child(1) {
-                width: 25%;
+                width: 24%;
             }
             th:nth-child(2),
             td:nth-child(2) {
-                width: 50%;
+                width: 40%;
             }
             th:nth-child(3),
-            td:nth-child(3) {
-                width: 25%;
+            td:nth-child(3),
+            th:nth-child(4),
+            td:nth-child(4) {
+                width: 13%;
+                white-space: nowrap;
             }
-
+            th:nth-child(5),
+            td:nth-child(5) {
+                width: 5%;
+                text-align: center;
+            }
+            th:nth-child(6),
+            td:nth-child(6) {
+                width: 5%;
+                text-align: center;
+            }
             .title,
             .url {
                 word-wrap: break-word;
+                word-break: break-word;
                 white-space: pre-wrap;
                 font-size: 0.95em;
                 line-height: 1.4;
@@ -112,10 +127,29 @@
                 font-family: monospace;
                 color: #2c3e50;
             }
+            .url a {
+                color: #2c3e50;
+                text-decoration: none;
+            }
+            .url a:hover {
+                text-decoration: underline;
+            }
             .date {
                 font-size: 0.9em;
                 color: #666;
                 white-space: nowrap;
+            }
+            .close-btn {
+                padding: 6px 10px;
+                background: #e74c3c;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 0.9em;
+            }
+            .close-btn:hover {
+                background: #c0392b;
             }
             .empty {
                 text-align: center;
@@ -126,7 +160,7 @@
         </style>
     </head>
     <body>
-        <h1>Browsing history</h1>
+        <h1>Visited pages</h1>
 
         <div class="controls">
             <input
@@ -137,6 +171,7 @@
             <div id="countInfo" class="count">Loading...</div>
             <button id="exportCsv">📄 Export CSV</button>
             <button id="exportJson">📦 Export JSON</button>
+            <button id="clearAll">🗑 Clear all</button>
         </div>
 
         <div class="container">
@@ -145,18 +180,22 @@
                     <tr>
                         <th>Title</th>
                         <th>URL</th>
-                        <th>Visited</th>
+                        <th>First visit</th>
+                        <th>Last visit</th>
+                        <th>Visits</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
-                <tbody id="history-body">
+                <tbody id="visits-body">
                     <tr>
-                        <td colspan="3" class="empty">Loading...</td>
+                        <td colspan="6" class="empty">Loading...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
         <script src="export.js"></script>
-        <script src="history.js"></script>
+        <script src="storage.js"></script>
+        <script src="visits.js"></script>
     </body>
 </html>

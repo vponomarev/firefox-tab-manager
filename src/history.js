@@ -8,15 +8,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allHistory = [];
   let filteredHistory = [];
 
-  // Загружаем историю
+  // Load history. startTime: 0 is required — without it history.search only
+  // returns the last 24 hours regardless of maxResults.
   try {
-    // Можно ограничить диапазон, например: { text: "", startTime: Date.now() - 30*24*60*60*1000 }
     const historyItems = await browser.history.search({
       text: "",
-      maxResults: 5000, // максимум, который обычно возвращается
+      startTime: 0,
+      maxResults: 5000,
     });
 
-    // Фильтруем: только с URL и не служебные
     allHistory = historyItems
       .filter(
         (item) =>
@@ -24,17 +24,24 @@ document.addEventListener("DOMContentLoaded", async () => {
           !item.url.startsWith("about:") &&
           !item.url.startsWith("chrome://"),
       )
-      .sort((a, b) => b.lastVisitTime - a.lastVisitTime); // новые — сверху
+      .sort((a, b) => b.lastVisitTime - a.lastVisitTime); // newest first
 
     filteredHistory = allHistory;
     renderTable(filteredHistory);
     updateCount();
   } catch (error) {
-    console.error("Ошибка загрузки истории:", error);
-    tbody.innerHTML = `<tr><td colspan="3" class="empty">Ошибка: ${error.message}</td></tr>`;
+    console.error("Error loading history:", error);
+    tbody.replaceChildren();
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 3;
+    td.className = "empty";
+    td.textContent = `Error: ${error.message}`;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
   }
 
-  // === ФИЛЬТРАЦИЯ ===
+  // === FILTER ===
   filterInput.addEventListener("input", () => {
     const query = filterInput.value.toLowerCase().trim();
     if (!query) {
@@ -50,26 +57,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateCount();
   });
 
-  // === ОТОБРАЖЕНИЕ ===
+  // === RENDER ===
   function renderTable(items) {
-    tbody.innerHTML = "";
+    tbody.replaceChildren();
     if (items.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="3" class="empty">Нет записей по фильтру</td></tr>';
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 3;
+      td.className = "empty";
+      td.textContent = "No matching records";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
       return;
     }
 
     items.forEach((item) => {
       const tr = document.createElement("tr");
 
-      // Название
+      // Title
       const tdTitle = document.createElement("td");
-      let title = item.title || "(без названия)";
+      let title = item.title || "(no title)";
       if (title.length > 450) title = title.substring(0, 450) + "…";
       const titleSpan = document.createElement("span");
       titleSpan.className = "title";
       titleSpan.textContent = title;
-      titleSpan.title = item.title;
+      titleSpan.title = item.title || "";
       tdTitle.appendChild(titleSpan);
 
       // URL
@@ -79,16 +91,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const urlSpan = document.createElement("span");
       urlSpan.className = "url";
       urlSpan.textContent = url;
-      urlSpan.title = item.url;
+      urlSpan.title = item.url || "";
       tdUrl.appendChild(urlSpan);
 
-      // Дата и время
+      // Date/time
       const tdDate = document.createElement("td");
       const date = new Date(item.lastVisitTime);
-      const dateStr = date.toLocaleDateString();
-      const timeStr = date.toLocaleTimeString();
       tdDate.className = "date";
-      tdDate.textContent = `${dateStr} ${timeStr}`;
+      tdDate.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
 
       tr.appendChild(tdTitle);
       tr.appendChild(tdUrl);
@@ -97,41 +107,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // === СЧЁТЧИК ===
+  // === COUNT ===
   function updateCount() {
-    const total = allHistory.length;
-    const shown = filteredHistory.length;
-    countInfo.textContent = `Показано: ${shown} / Всего: ${total}`;
+    countInfo.textContent = `Shown: ${filteredHistory.length} / Total: ${allHistory.length}`;
   }
 
-  // === ЭКСПОРТ CSV ===
+  // === EXPORT CSV ===
   exportCsvBtn.addEventListener("click", () => {
-    const data = filteredHistory;
-    const csv = [["Название", "URL", "Посещено"].join(";")];
-    data.forEach((item) => {
-      const date = new Date(item.lastVisitTime)
-        .toISOString()
-        .replace("T", " ")
-        .split(".")[0];
-      const row = [
-        `"${(item.title || "").replace(/"/g, '""')}"`,
-        `"${item.url}"`,
-        `"${date}"`,
-      ].join(";");
-      csv.push(row);
-    });
-    const blob = new Blob([csv.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `история_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const rows = filteredHistory.map((item) => [
+      item.title || "",
+      item.url || "",
+      new Date(item.lastVisitTime).toISOString().replace("T", " ").split(".")[0],
+    ]);
+    ExportUtils.exportCsv(
+      `history_${ExportUtils.dateStamp()}.csv`,
+      ["Title", "URL", "Visited"],
+      rows,
+    );
   });
 
-  // === ЭКСПОРТ JSON ===
+  // === EXPORT JSON ===
   exportJsonBtn.addEventListener("click", () => {
     const data = filteredHistory.map((item) => ({
       title: item.title,
@@ -139,13 +134,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       lastVisitTime: new Date(item.lastVisitTime).toISOString(),
       visitCount: item.visitCount,
     }));
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `история_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    ExportUtils.exportJson(`history_${ExportUtils.dateStamp()}.json`, data);
   });
 });

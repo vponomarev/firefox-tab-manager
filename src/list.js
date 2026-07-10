@@ -7,54 +7,57 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   let allTabs = [];
   let filteredTabs = [];
-  let windowMap = new Map(); // Объявляем заранее
+  let windowMap = new Map();
 
-  // Загрузка всех вкладок и окон
-  try {
-    // Сначала получаем окна
+  // Load windows + tabs and render. Called on init and whenever tabs change.
+  async function reload() {
     const windows = await browser.windows.getAll();
     windowMap = new Map(
       windows.map((win) => [win.id, win.incognito ? "Private" : "Common"]),
     );
 
-    // Затем вкладки
     allTabs = await browser.tabs.query({});
-
-    // Сортировка: по окну, потом по индексу
     allTabs.sort((a, b) => a.windowId - b.windowId || a.index - b.index);
 
-    // Инициализация фильтра
-    filteredTabs = allTabs;
-
-    // Отображаем
-    renderTable(filteredTabs);
-    updateCount();
-  } catch (error) {
-    console.error("Error loading TABs:", error);
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">Ошибка: ${error.message}</td></tr>`;
-    return;
+    applyFilter();
   }
 
-  // === ОТОБРАЖЕНИЕ ТАБЛИЦЫ ===
+  function showError(message) {
+    tbody.replaceChildren();
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.className = "empty";
+    td.textContent = `Error: ${message}`;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+
+  // === RENDER ===
   function renderTable(tabs) {
-    tbody.innerHTML = "";
+    tbody.replaceChildren();
     if (tabs.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" class="empty">No match found</td></tr>';
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 4;
+      td.className = "empty";
+      td.textContent = "No match found";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
       return;
     }
 
     tabs.forEach((tab) => {
       const tr = document.createElement("tr");
 
-      // Название
+      // Title
       const tdTitle = document.createElement("td");
-      let title = tab.title || "(без названия)";
+      let title = tab.title || "(no title)";
       if (title.length > 450) title = title.substring(0, 450) + "…";
       const titleSpan = document.createElement("span");
       titleSpan.className = "title";
       titleSpan.textContent = title;
-      titleSpan.title = tab.title;
+      titleSpan.title = tab.title || "";
       titleSpan.style.cursor = "pointer";
       titleSpan.addEventListener("click", () => {
         browser.tabs.update(tab.id, { active: true });
@@ -69,16 +72,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       const urlSpan = document.createElement("span");
       urlSpan.className = "url";
       urlSpan.textContent = url;
-      urlSpan.title = tab.url;
+      urlSpan.title = tab.url || "";
       tdUrl.appendChild(urlSpan);
 
-      // Окно
+      // Window
       const tdWindow = document.createElement("td");
       tdWindow.className = "window";
       const windowType = windowMap.get(tab.windowId) || "Unknown";
-      tdWindow.textContent = `Окно ${tab.windowId} (${windowType})`;
+      tdWindow.textContent = `Window ${tab.windowId} (${windowType})`;
 
-      // Кнопка "Закрыть"
+      // Close button
       const tdAction = document.createElement("td");
       const closeBtn = document.createElement("button");
       closeBtn.textContent = "Close";
@@ -86,11 +89,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       closeBtn.addEventListener("click", async () => {
         try {
           await browser.tabs.remove(tab.id);
-          tr.remove();
-          updateCount();
+          // onRemoved listener will reload the list and refresh the count.
         } catch (err) {
           console.error("Error closing:", err);
-          alert("Unable to close TAB");
+          alert("Unable to close tab");
         }
       });
       tdAction.appendChild(closeBtn);
@@ -103,15 +105,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // === СЧЁТЧИК ===
+  // === COUNT ===
   function updateCount() {
-    const total = allTabs.length;
-    const shown = filteredTabs.length;
-    countInfo.textContent = `Show: ${shown} / Total: ${total}`;
+    countInfo.textContent = `Shown: ${filteredTabs.length} / Total: ${allTabs.length}`;
   }
 
-  // === ФИЛЬТРАЦИЯ ===
-  filterInput.addEventListener("input", () => {
+  // === FILTER ===
+  function applyFilter() {
     const query = filterInput.value.toLowerCase().trim();
     if (!query) {
       filteredTabs = allTabs;
@@ -124,37 +124,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     renderTable(filteredTabs);
     updateCount();
-  });
+  }
 
-  // === ЭКСПОРТ В CSV ===
+  filterInput.addEventListener("input", applyFilter);
+
+  // Live updates: keep the list in sync as tabs open/close/navigate.
+  const scheduleReload = (() => {
+    let pending = false;
+    return () => {
+      if (pending) return;
+      pending = true;
+      setTimeout(async () => {
+        pending = false;
+        try {
+          await reload();
+        } catch (err) {
+          console.error("Error refreshing tabs:", err);
+        }
+      }, 150);
+    };
+  })();
+
+  browser.tabs.onCreated.addListener(scheduleReload);
+  browser.tabs.onRemoved.addListener(scheduleReload);
+  browser.tabs.onUpdated.addListener(scheduleReload);
+  browser.tabs.onMoved.addListener(scheduleReload);
+
+  // === EXPORT ===
   exportCsvBtn.addEventListener("click", () => {
-    const data = filteredTabs;
-    const csv = [
-      ["Title", "URL", "Window ID", "Window type", "Index"].join(";"),
-    ];
-    data.forEach((tab) => {
-      const windowType = windowMap.get(tab.windowId) || "Unknown";
-      const row = [
-        `"${(tab.title || "").replace(/"/g, '""')}"`,
-        `"${tab.url || ""}"`,
-        tab.windowId,
-        `"${windowType}"`,
-        tab.index,
-      ].join(";");
-      csv.push(row);
-    });
-    const blob = new Blob([csv.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `вкладки_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const rows = filteredTabs.map((tab) => [
+      tab.title || "",
+      tab.url || "",
+      tab.windowId,
+      windowMap.get(tab.windowId) || "Unknown",
+      tab.index,
+    ]);
+    ExportUtils.exportCsv(
+      `tabs_${ExportUtils.dateStamp()}.csv`,
+      ["Title", "URL", "Window ID", "Window type", "Index"],
+      rows,
+    );
   });
 
-  // === ЭКСПОРТ В JSON ===
   exportJsonBtn.addEventListener("click", () => {
     const data = filteredTabs.map((tab) => ({
       title: tab.title,
@@ -165,13 +176,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       active: tab.active,
       pinned: tab.pinned,
     }));
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tabs_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    ExportUtils.exportJson(`tabs_${ExportUtils.dateStamp()}.json`, data);
   });
+
+  // Initial load
+  try {
+    await reload();
+  } catch (error) {
+    console.error("Error loading tabs:", error);
+    showError(error.message);
+  }
 });

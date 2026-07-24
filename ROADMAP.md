@@ -9,12 +9,13 @@ default and can't be reliably searched long-term).
 
 ## Current state (v0.3)
 
-- Background tracker records every visited page into `browser.storage.local`
-  (`background.js` + `storage.js`), keyed by URL with
-  `firstVisit` / `lastVisit` / `visitCount`.
-- `visits.html/js` — searchable UI over the local log (filter, delete, clear,
-  CSV/JSON export).
-- Tabs list with live refresh; history viewer (full range); close-duplicates.
+- Background tracker records non-private HTTP(S) pages into IndexedDB
+  (`background.js` + `storage.js`), keyed by URL with `firstVisit` /
+  `lastVisit` / `visitCount`.
+- `visits.html/js` — paginated searchable UI over the local log (filter,
+  delete, clear, CSV/JSON export).
+- Tabs list with live refresh; history viewer (up to 5,000 entries across the
+  full time range); close-duplicates.
 
 The storage schema is intentionally sync-friendly: URL is a stable id and
 `lastVisit` gives a natural ordering for last-write-wins merges.

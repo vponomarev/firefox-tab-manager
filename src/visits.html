@@ -63,6 +63,14 @@
             #clearAll {
                 background: #e74c3c;
             }
+            #previousPage,
+            #nextPage {
+                background: #7f8c8d;
+            }
+            .controls button:disabled {
+                cursor: default;
+                opacity: 0.5;
+            }
             .container {
                 max-width: 100%;
                 overflow-x: auto;
@@ -172,6 +180,9 @@
             <button id="exportCsv">📄 Export CSV</button>
             <button id="exportJson">📦 Export JSON</button>
             <button id="clearAll">🗑 Clear all</button>
+            <button id="previousPage">Previous</button>
+            <span id="pageInfo" class="count"></span>
+            <button id="nextPage">Next</button>
         </div>
 
         <div class="container">
@@ -195,7 +206,6 @@
         </div>
 
         <script src="export.js"></script>
-        <script src="storage.js"></script>
         <script src="visits.js"></script>
     </body>
 </html>

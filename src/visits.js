@@ -1,181 +1,255 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  const PAGE_SIZE = 200;
   const tbody = document.getElementById("visits-body");
   const filterInput = document.getElementById("filterInput");
   const countInfo = document.getElementById("countInfo");
+  const pageInfo = document.getElementById("pageInfo");
+  const previousPageBtn = document.getElementById("previousPage");
+  const nextPageBtn = document.getElementById("nextPage");
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportJsonBtn = document.getElementById("exportJson");
   const clearAllBtn = document.getElementById("clearAll");
 
-  let allVisits = [];
-  let filteredVisits = [];
+  let currentVisits = [];
+  let totalVisits = 0;
+  let offset = 0;
+  let loadGeneration = 0;
+  let filterTimer;
 
-  function fmtDate(ts) {
-    if (!ts) return "";
-    const d = new Date(ts);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  function callStore(action, properties = {}) {
+    return browser.runtime.sendMessage({
+      type: "visit-store",
+      action,
+      ...properties,
+    });
   }
 
-  async function load() {
-    try {
-      allVisits = (await VisitStore.getAll()).sort(
-        (a, b) => b.lastVisit - a.lastVisit,
-      );
-      applyFilter();
-    } catch (error) {
-      console.error("Error loading visits:", error);
-      tbody.replaceChildren();
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 6;
-      td.className = "empty";
-      td.textContent = `Error: ${error.message}`;
-      tr.appendChild(td);
-      tbody.appendChild(tr);
-    }
+  function fmtDate(timestamp) {
+    if (!timestamp) return "";
+    const date = new Date(timestamp);
+    return Number.isNaN(date.getTime())
+      ? ""
+      : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
   }
 
-  function applyFilter() {
-    const query = filterInput.value.toLowerCase().trim();
-    if (!query) {
-      filteredVisits = allVisits;
-    } else {
-      filteredVisits = allVisits.filter((v) => {
-        const title = (v.title || "").toLowerCase();
-        const url = (v.url || "").toLowerCase();
-        return title.includes(query) || url.includes(query);
-      });
-    }
-    renderTable(filteredVisits);
-    updateCount();
-  }
-
-  function renderTable(items) {
+  function showMessage(message) {
     tbody.replaceChildren();
-    if (items.length === 0) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 6;
-      td.className = "empty";
-      td.textContent = "No records";
-      tr.appendChild(td);
-      tbody.appendChild(tr);
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 6;
+    cell.className = "empty";
+    cell.textContent = message;
+    row.appendChild(cell);
+    tbody.appendChild(row);
+  }
+
+  async function loadPage() {
+    const generation = ++loadGeneration;
+    try {
+      const page = await callStore("query", {
+        options: {
+          text: filterInput.value,
+          offset,
+          limit: PAGE_SIZE,
+        },
+      });
+      if (generation !== loadGeneration) return;
+
+      // A deletion in another context may leave the current page past the end.
+      if (page.total > 0 && offset >= page.total) {
+        offset = Math.floor((page.total - 1) / PAGE_SIZE) * PAGE_SIZE;
+        await loadPage();
+        return;
+      }
+
+      currentVisits = page.items;
+      totalVisits = page.total;
+      renderTable();
+      updateNavigation();
+    } catch (error) {
+      if (generation !== loadGeneration) return;
+      console.error("Error loading visits:", error);
+      showMessage(`Error: ${error.message}`);
+    }
+  }
+
+  function renderTable() {
+    tbody.replaceChildren();
+    if (currentVisits.length === 0) {
+      showMessage("No records");
       return;
     }
 
-    items.forEach((visit) => {
-      const tr = document.createElement("tr");
+    const fragment = document.createDocumentFragment();
+    for (const visit of currentVisits) {
+      const row = document.createElement("tr");
 
-      // Title
-      const tdTitle = document.createElement("td");
+      const titleCell = document.createElement("td");
       let title = visit.title || "(no title)";
-      if (title.length > 450) title = title.substring(0, 450) + "…";
+      if (title.length > 450) title = `${title.substring(0, 450)}…`;
       const titleSpan = document.createElement("span");
       titleSpan.className = "title";
       titleSpan.textContent = title;
       titleSpan.title = visit.title || "";
-      tdTitle.appendChild(titleSpan);
+      titleCell.appendChild(titleSpan);
 
-      // URL (clickable link that opens the page in a new tab)
-      const tdUrl = document.createElement("td");
-      tdUrl.className = "url";
+      const urlCell = document.createElement("td");
+      urlCell.className = "url";
       let urlText = visit.url || "";
-      if (urlText.length > 450) urlText = urlText.substring(0, 450) + "…";
+      if (urlText.length > 450) urlText = `${urlText.substring(0, 450)}…`;
       const link = document.createElement("a");
       link.href = visit.url;
       link.textContent = urlText;
       link.title = visit.url;
       link.target = "_blank";
       link.rel = "noreferrer";
-      tdUrl.appendChild(link);
+      urlCell.appendChild(link);
 
-      // First / last visit
-      const tdFirst = document.createElement("td");
-      tdFirst.className = "date";
-      tdFirst.textContent = fmtDate(visit.firstVisit);
+      const firstVisitCell = document.createElement("td");
+      firstVisitCell.className = "date";
+      firstVisitCell.textContent = fmtDate(visit.firstVisit);
 
-      const tdLast = document.createElement("td");
-      tdLast.className = "date";
-      tdLast.textContent = fmtDate(visit.lastVisit);
+      const lastVisitCell = document.createElement("td");
+      lastVisitCell.className = "date";
+      lastVisitCell.textContent = fmtDate(visit.lastVisit);
 
-      // Visit count
-      const tdCount = document.createElement("td");
-      tdCount.style.textAlign = "center";
-      tdCount.textContent = String(visit.visitCount || 1);
+      const countCell = document.createElement("td");
+      countCell.style.textAlign = "center";
+      countCell.textContent = String(visit.visitCount || 1);
 
-      // Delete
-      const tdAction = document.createElement("td");
-      const delBtn = document.createElement("button");
-      delBtn.textContent = "Delete";
-      delBtn.className = "close-btn";
-      delBtn.addEventListener("click", async () => {
+      const actionCell = document.createElement("td");
+      const deleteButton = document.createElement("button");
+      deleteButton.textContent = "Delete";
+      deleteButton.className = "close-btn";
+      deleteButton.addEventListener("click", async () => {
+        deleteButton.disabled = true;
         try {
-          await VisitStore.remove(visit.url);
-          allVisits = allVisits.filter((v) => v.url !== visit.url);
-          filteredVisits = filteredVisits.filter((v) => v.url !== visit.url);
-          tr.remove();
-          updateCount();
-        } catch (err) {
-          console.error("Error deleting record:", err);
+          await callStore("remove", { url: visit.url });
+          await loadPage();
+        } catch (error) {
+          deleteButton.disabled = false;
+          console.error("Error deleting record:", error);
           alert("Unable to delete record");
         }
       });
-      tdAction.appendChild(delBtn);
+      actionCell.appendChild(deleteButton);
 
-      tr.appendChild(tdTitle);
-      tr.appendChild(tdUrl);
-      tr.appendChild(tdFirst);
-      tr.appendChild(tdLast);
-      tr.appendChild(tdCount);
-      tr.appendChild(tdAction);
-      tbody.appendChild(tr);
-    });
+      row.appendChild(titleCell);
+      row.appendChild(urlCell);
+      row.appendChild(firstVisitCell);
+      row.appendChild(lastVisitCell);
+      row.appendChild(countCell);
+      row.appendChild(actionCell);
+      fragment.appendChild(row);
+    }
+    tbody.appendChild(fragment);
   }
 
-  function updateCount() {
-    countInfo.textContent = `Shown: ${filteredVisits.length} / Total: ${allVisits.length}`;
+  function updateNavigation() {
+    const first = totalVisits === 0 ? 0 : offset + 1;
+    const last = Math.min(offset + currentVisits.length, totalVisits);
+    countInfo.textContent = `Shown: ${first}-${last} / Total: ${totalVisits}`;
+
+    const currentPage = totalVisits === 0 ? 0 : Math.floor(offset / PAGE_SIZE) + 1;
+    const pageCount =
+      totalVisits === 0 ? 0 : Math.ceil(totalVisits / PAGE_SIZE);
+    pageInfo.textContent = `Page ${currentPage} / ${pageCount}`;
+    previousPageBtn.disabled = offset === 0;
+    nextPageBtn.disabled = offset + currentVisits.length >= totalVisits;
   }
 
-  filterInput.addEventListener("input", applyFilter);
+  filterInput.addEventListener("input", () => {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => {
+      offset = 0;
+      loadPage();
+    }, 200);
+  });
 
-  clearAllBtn.addEventListener("click", async () => {
-    if (!confirm("Delete the entire visit log? This cannot be undone.")) return;
-    try {
-      await VisitStore.clear();
-      allVisits = [];
-      filteredVisits = [];
-      renderTable(filteredVisits);
-      updateCount();
-    } catch (err) {
-      console.error("Error clearing log:", err);
-      alert("Unable to clear log");
+  previousPageBtn.addEventListener("click", () => {
+    offset = Math.max(0, offset - PAGE_SIZE);
+    loadPage();
+  });
+
+  nextPageBtn.addEventListener("click", () => {
+    if (offset + currentVisits.length < totalVisits) {
+      offset += PAGE_SIZE;
+      loadPage();
     }
   });
 
-  exportCsvBtn.addEventListener("click", () => {
-    const rows = filteredVisits.map((v) => [
-      v.title || "",
-      v.url || "",
-      new Date(v.firstVisit).toISOString(),
-      new Date(v.lastVisit).toISOString(),
-      v.visitCount || 1,
-    ]);
-    ExportUtils.exportCsv(
-      `visited_pages_${ExportUtils.dateStamp()}.csv`,
-      ["Title", "URL", "First visit", "Last visit", "Visits"],
-      rows,
-    );
+  clearAllBtn.addEventListener("click", async () => {
+    if (!confirm("Delete the entire visit log? This cannot be undone.")) return;
+    clearAllBtn.disabled = true;
+    try {
+      await callStore("clear");
+      offset = 0;
+      await loadPage();
+    } catch (error) {
+      console.error("Error clearing log:", error);
+      alert("Unable to clear log");
+    } finally {
+      clearAllBtn.disabled = false;
+    }
   });
 
-  exportJsonBtn.addEventListener("click", () => {
-    const data = filteredVisits.map((v) => ({
-      title: v.title,
-      url: v.url,
-      firstVisit: new Date(v.firstVisit).toISOString(),
-      lastVisit: new Date(v.lastVisit).toISOString(),
-      visitCount: v.visitCount,
-    }));
-    ExportUtils.exportJson(`visited_pages_${ExportUtils.dateStamp()}.json`, data);
+  async function loadExportData() {
+    exportCsvBtn.disabled = true;
+    exportJsonBtn.disabled = true;
+    try {
+      return await callStore("getAll", { text: filterInput.value });
+    } finally {
+      exportCsvBtn.disabled = false;
+      exportJsonBtn.disabled = false;
+    }
+  }
+
+  exportCsvBtn.addEventListener("click", async () => {
+    try {
+      const visits = await loadExportData();
+      const rows = visits.map((visit) => [
+        visit.title || "",
+        visit.url || "",
+        new Date(visit.firstVisit).toISOString(),
+        new Date(visit.lastVisit).toISOString(),
+        visit.visitCount || 1,
+      ]);
+      ExportUtils.exportCsv(
+        `visited_pages_${ExportUtils.dateStamp()}.csv`,
+        ["Title", "URL", "First visit", "Last visit", "Visits"],
+        rows,
+      );
+    } catch (error) {
+      console.error("Error exporting visits:", error);
+      alert("Unable to export visit log");
+    }
   });
 
-  await load();
+  exportJsonBtn.addEventListener("click", async () => {
+    try {
+      const visits = await loadExportData();
+      const data = visits.map((visit) => ({
+        title: visit.title,
+        url: visit.url,
+        firstVisit: new Date(visit.firstVisit).toISOString(),
+        lastVisit: new Date(visit.lastVisit).toISOString(),
+        visitCount: visit.visitCount,
+      }));
+      ExportUtils.exportJson(
+        `visited_pages_${ExportUtils.dateStamp()}.json`,
+        data,
+      );
+    } catch (error) {
+      console.error("Error exporting visits:", error);
+      alert("Unable to export visit log");
+    }
+  });
+
+  browser.runtime.onMessage.addListener((message) => {
+    if (message && message.type === "visit-store-changed") {
+      loadPage();
+    }
+  });
+
+  await loadPage();
 });

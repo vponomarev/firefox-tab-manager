@@ -10,12 +10,13 @@ log of visited pages.
 - **Show all tabs** — a full-page table of every open tab across all windows,
   with live updates, filtering, click-to-focus, per-tab close, and CSV/JSON
   export.
-- **History** — a searchable view of Firefox browsing history (full range, not
-  just the last 24h) with CSV/JSON export.
+- **History** — a searchable view of up to 5,000 Firefox history entries across
+  the full time range (not just the last 24h), with CSV/JSON export.
 - **Tracked pages** — the extension's own log of visited pages, recorded in the
-  background into `browser.storage.local`. Each entry keeps the title, URL,
-  first/last visit timestamps and a visit counter. Searchable, exportable, with
-  per-entry delete and "clear all".
+  background into a transactional IndexedDB database. Each entry keeps the
+  title, URL, first/last visit timestamps and a visit counter. Searchable,
+  paginated, exportable, with per-entry delete and "clear all". Private-window
+  pages are never tracked.
 
 ## Why a separate visit log?
 

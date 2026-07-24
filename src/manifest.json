@@ -6,6 +6,7 @@
   "homepage_url": "https://github.com/vponomarev/firefox-tab-manager",
   "description": "Manage tabs, browse history, and keep a searchable log of visited pages",
   "permissions": ["tabs", "history", "storage"],
+  "incognito": "not_allowed",
   "background": {
     "scripts": ["storage.js", "background.js"],
     "persistent": true

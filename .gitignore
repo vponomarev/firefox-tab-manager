@@ -1,0 +1,10 @@
+# IDE
+.idea/
+.vscode/
+
+# Build artifacts
+firefox-tab-manager.zip
+*.xpi
+
+# OS
+.DS_Store

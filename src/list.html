@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>TABs list</title>
+        <title>Open tabs</title>
         <style>
             * {
                 box-sizing: border-box;
@@ -36,7 +36,7 @@
             table {
                 width: 100%;
                 border-collapse: collapse;
-                table-layout: fixed; /* равномерное распределение столбцов */
+                table-layout: fixed; /* even column distribution */
             }
 
             th,
@@ -55,11 +55,11 @@
                 box-shadow: 0 1px 0 #ddd;
             }
 
-            /* Столбцы: пропорции */
+            /* Column proportions */
             th:nth-child(1),
             td:nth-child(1) {
                 width: 25%;
-            } /* Название */
+            } /* Title */
             th:nth-child(2),
             td:nth-child(2) {
                 width: 50%;
@@ -67,19 +67,19 @@
             th:nth-child(3),
             td:nth-child(3) {
                 width: 15%;
-            } /* Окно */
+            } /* Window */
             th:nth-child(4),
             td:nth-child(4) {
                 width: 10%;
                 text-align: center;
-            } /* Действие */
+            } /* Action */
 
-            /* Перенос и ограничение текста */
+            /* Text wrapping and truncation */
             .title,
             .url {
                 word-wrap: break-word;
                 word-break: break-word;
-                white-space: pre-wrap; /* Сохраняет пробелы и переносы */
+                white-space: pre-wrap; /* preserve spaces and line breaks */
                 font-size: 0.95em;
                 line-height: 1.4;
             }
@@ -124,7 +124,7 @@
     <body>
         <h1>Open tabs</h1>
 
-        <!-- Панель фильтра и счётчик -->
+        <!-- Filter panel and counter -->
         <div
             style="
                 padding: 15px;
@@ -154,7 +154,7 @@
                 id="countInfo"
                 style="font-size: 14px; color: #555; white-space: nowrap"
             >
-                Downloading...
+                Loading...
             </div>
             <div style="display: flex; gap: 8px">
                 <button
@@ -188,7 +188,7 @@
             </div>
         </div>
 
-        <!-- Таблица -->
+        <!-- Table -->
         <div class="container">
             <table>
                 <thead>
@@ -206,6 +206,7 @@
                 </tbody>
             </table>
         </div>
+        <script src="export.js"></script>
         <script src="list.js"></script>
     </body>
 </html>

@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const PAGE_SIZE = 200;
   const tbody = document.getElementById("visits-body");
   const filterInput = document.getElementById("filterInput");
   const countInfo = document.getElementById("countInfo");
@@ -9,6 +8,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportJsonBtn = document.getElementById("exportJson");
   const clearAllBtn = document.getElementById("clearAll");
+  const capabilities = await Platform.getCapabilities();
+  const PAGE_SIZE = capabilities.isAndroid ? 50 : 200;
+
+  if (capabilities.isAndroid) {
+    document.documentElement.classList.add("android");
+  }
 
   let currentVisits = [];
   let totalVisits = 0;
@@ -85,6 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const row = document.createElement("tr");
 
       const titleCell = document.createElement("td");
+      titleCell.dataset.label = "Title";
       let title = visit.title || "(no title)";
       if (title.length > 450) title = `${title.substring(0, 450)}…`;
       const titleSpan = document.createElement("span");
@@ -94,6 +100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       titleCell.appendChild(titleSpan);
 
       const urlCell = document.createElement("td");
+      urlCell.dataset.label = "URL";
       urlCell.className = "url";
       let urlText = visit.url || "";
       if (urlText.length > 450) urlText = `${urlText.substring(0, 450)}…`;
@@ -106,18 +113,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       urlCell.appendChild(link);
 
       const firstVisitCell = document.createElement("td");
+      firstVisitCell.dataset.label = "First visit";
       firstVisitCell.className = "date";
       firstVisitCell.textContent = fmtDate(visit.firstVisit);
 
       const lastVisitCell = document.createElement("td");
+      lastVisitCell.dataset.label = "Last visit";
       lastVisitCell.className = "date";
       lastVisitCell.textContent = fmtDate(visit.lastVisit);
 
       const countCell = document.createElement("td");
+      countCell.dataset.label = "Visits";
       countCell.style.textAlign = "center";
       countCell.textContent = String(visit.visitCount || 1);
 
       const actionCell = document.createElement("td");
+      actionCell.dataset.label = "Action";
       const deleteButton = document.createElement("button");
       deleteButton.textContent = "Delete";
       deleteButton.className = "close-btn";

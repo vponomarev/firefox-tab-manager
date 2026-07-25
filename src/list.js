@@ -2,133 +2,156 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tbody = document.getElementById("tabs-body");
   const filterInput = document.getElementById("filterInput");
   const countInfo = document.getElementById("countInfo");
+  const windowHeader = document.getElementById("windowHeader");
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportJsonBtn = document.getElementById("exportJson");
+  const capabilities = await Platform.getCapabilities();
+  const columnCount = capabilities.supportsWindows ? 4 : 3;
+
+  if (capabilities.isAndroid) {
+    document.documentElement.classList.add("android");
+  }
+  windowHeader.hidden = !capabilities.supportsWindows;
 
   let allTabs = [];
   let filteredTabs = [];
   let windowMap = new Map();
 
-  // Load windows + tabs and render. Called on init and whenever tabs change.
   async function reload() {
-    const windows = await browser.windows.getAll();
-    windowMap = new Map(
-      windows.map((win) => [win.id, win.incognito ? "Private" : "Common"]),
-    );
+    if (capabilities.supportsWindows) {
+      const windows = await browser.windows.getAll();
+      windowMap = new Map(
+        windows.map((win) => [win.id, win.incognito ? "Private" : "Common"]),
+      );
+    } else {
+      windowMap = new Map();
+    }
 
     allTabs = await browser.tabs.query({});
-    allTabs.sort((a, b) => a.windowId - b.windowId || a.index - b.index);
-
+    allTabs.sort((a, b) => {
+      if (capabilities.supportsWindows && a.windowId !== b.windowId) {
+        return a.windowId - b.windowId;
+      }
+      return a.index - b.index;
+    });
     applyFilter();
   }
 
-  function showError(message) {
+  function showMessage(message) {
     tbody.replaceChildren();
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 4;
-    td.className = "empty";
-    td.textContent = `Error: ${message}`;
-    tr.appendChild(td);
-    tbody.appendChild(tr);
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = columnCount;
+    cell.className = "empty";
+    cell.textContent = message;
+    row.appendChild(cell);
+    tbody.appendChild(row);
   }
 
-  // === RENDER ===
   function renderTable(tabs) {
     tbody.replaceChildren();
     if (tabs.length === 0) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 4;
-      td.className = "empty";
-      td.textContent = "No match found";
-      tr.appendChild(td);
-      tbody.appendChild(tr);
+      showMessage("No match found");
       return;
     }
 
-    tabs.forEach((tab) => {
-      const tr = document.createElement("tr");
+    const fragment = document.createDocumentFragment();
+    for (const tab of tabs) {
+      const row = document.createElement("tr");
 
-      // Title
-      const tdTitle = document.createElement("td");
+      const titleCell = document.createElement("td");
+      titleCell.dataset.label = "Title";
       let title = tab.title || "(no title)";
-      if (title.length > 450) title = title.substring(0, 450) + "…";
+      if (title.length > 450) title = `${title.substring(0, 450)}…`;
       const titleSpan = document.createElement("span");
       titleSpan.className = "title";
       titleSpan.textContent = title;
       titleSpan.title = tab.title || "";
-      titleSpan.style.cursor = "pointer";
-      titleSpan.addEventListener("click", () => {
-        browser.tabs.update(tab.id, { active: true });
-        browser.windows.update(tab.windowId, { focused: true });
-      });
-      tdTitle.appendChild(titleSpan);
+      titleSpan.tabIndex = 0;
+      titleSpan.setAttribute("role", "button");
 
-      // URL
-      const tdUrl = document.createElement("td");
+      const activateTab = async () => {
+        try {
+          await browser.tabs.update(tab.id, { active: true });
+          if (capabilities.supportsWindows) {
+            await browser.windows.update(tab.windowId, { focused: true });
+          }
+        } catch (error) {
+          console.error("Error activating tab:", error);
+        }
+      };
+      titleSpan.addEventListener("click", activateTab);
+      titleSpan.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          activateTab();
+        }
+      });
+      titleCell.appendChild(titleSpan);
+
+      const urlCell = document.createElement("td");
+      urlCell.dataset.label = "URL";
       let url = tab.url || "";
-      if (url.length > 450) url = url.substring(0, 450) + "…";
+      if (url.length > 450) url = `${url.substring(0, 450)}…`;
       const urlSpan = document.createElement("span");
       urlSpan.className = "url";
       urlSpan.textContent = url;
       urlSpan.title = tab.url || "";
-      tdUrl.appendChild(urlSpan);
+      urlCell.appendChild(urlSpan);
 
-      // Window
-      const tdWindow = document.createElement("td");
-      tdWindow.className = "window";
-      const windowType = windowMap.get(tab.windowId) || "Unknown";
-      tdWindow.textContent = `Window ${tab.windowId} (${windowType})`;
+      row.appendChild(titleCell);
+      row.appendChild(urlCell);
 
-      // Close button
-      const tdAction = document.createElement("td");
-      const closeBtn = document.createElement("button");
-      closeBtn.textContent = "Close";
-      closeBtn.className = "close-btn";
-      closeBtn.addEventListener("click", async () => {
+      if (capabilities.supportsWindows) {
+        const windowCell = document.createElement("td");
+        windowCell.dataset.label = "Window";
+        windowCell.className = "window";
+        const windowType = windowMap.get(tab.windowId) || "Unknown";
+        windowCell.textContent = `Window ${tab.windowId} (${windowType})`;
+        row.appendChild(windowCell);
+      }
+
+      const actionCell = document.createElement("td");
+      actionCell.dataset.label = "Action";
+      const closeButton = document.createElement("button");
+      closeButton.textContent = "Close";
+      closeButton.className = "close-btn";
+      closeButton.addEventListener("click", async () => {
+        closeButton.disabled = true;
         try {
           await browser.tabs.remove(tab.id);
-          // onRemoved listener will reload the list and refresh the count.
-        } catch (err) {
-          console.error("Error closing:", err);
+        } catch (error) {
+          closeButton.disabled = false;
+          console.error("Error closing tab:", error);
           alert("Unable to close tab");
         }
       });
-      tdAction.appendChild(closeBtn);
-
-      tr.appendChild(tdTitle);
-      tr.appendChild(tdUrl);
-      tr.appendChild(tdWindow);
-      tr.appendChild(tdAction);
-      tbody.appendChild(tr);
-    });
+      actionCell.appendChild(closeButton);
+      row.appendChild(actionCell);
+      fragment.appendChild(row);
+    }
+    tbody.appendChild(fragment);
   }
 
-  // === COUNT ===
   function updateCount() {
     countInfo.textContent = `Shown: ${filteredTabs.length} / Total: ${allTabs.length}`;
   }
 
-  // === FILTER ===
   function applyFilter() {
-    const query = filterInput.value.toLowerCase().trim();
-    if (!query) {
-      filteredTabs = allTabs;
-    } else {
-      filteredTabs = allTabs.filter((tab) => {
-        const title = (tab.title || "").toLowerCase();
-        const url = (tab.url || "").toLowerCase();
-        return title.includes(query) || url.includes(query);
-      });
-    }
+    const query = filterInput.value.toLocaleLowerCase().trim();
+    filteredTabs = query
+      ? allTabs.filter((tab) => {
+          const title = (tab.title || "").toLocaleLowerCase();
+          const url = (tab.url || "").toLocaleLowerCase();
+          return title.includes(query) || url.includes(query);
+        })
+      : allTabs;
     renderTable(filteredTabs);
     updateCount();
   }
 
   filterInput.addEventListener("input", applyFilter);
 
-  // Live updates: keep the list in sync as tabs open/close/navigate.
   const scheduleReload = (() => {
     let pending = false;
     return () => {
@@ -138,52 +161,69 @@ document.addEventListener("DOMContentLoaded", async () => {
         pending = false;
         try {
           await reload();
-        } catch (err) {
-          console.error("Error refreshing tabs:", err);
+        } catch (error) {
+          console.error("Error refreshing tabs:", error);
         }
       }, 150);
     };
   })();
 
-  browser.tabs.onCreated.addListener(scheduleReload);
-  browser.tabs.onRemoved.addListener(scheduleReload);
-  browser.tabs.onUpdated.addListener(scheduleReload);
-  browser.tabs.onMoved.addListener(scheduleReload);
+  for (const event of [
+    browser.tabs.onCreated,
+    browser.tabs.onRemoved,
+    browser.tabs.onUpdated,
+    browser.tabs.onMoved,
+  ]) {
+    if (event && typeof event.addListener === "function") {
+      event.addListener(scheduleReload);
+    }
+  }
 
-  // === EXPORT ===
   exportCsvBtn.addEventListener("click", () => {
-    const rows = filteredTabs.map((tab) => [
-      tab.title || "",
-      tab.url || "",
-      tab.windowId,
-      windowMap.get(tab.windowId) || "Unknown",
-      tab.index,
-    ]);
+    const headers = capabilities.supportsWindows
+      ? ["Title", "URL", "Window ID", "Window type", "Index"]
+      : ["Title", "URL", "Index"];
+    const rows = filteredTabs.map((tab) =>
+      capabilities.supportsWindows
+        ? [
+            tab.title || "",
+            tab.url || "",
+            tab.windowId,
+            windowMap.get(tab.windowId) || "Unknown",
+            tab.index,
+          ]
+        : [tab.title || "", tab.url || "", tab.index],
+    );
     ExportUtils.exportCsv(
       `tabs_${ExportUtils.dateStamp()}.csv`,
-      ["Title", "URL", "Window ID", "Window type", "Index"],
+      headers,
       rows,
     );
   });
 
   exportJsonBtn.addEventListener("click", () => {
-    const data = filteredTabs.map((tab) => ({
-      title: tab.title,
-      url: tab.url,
-      windowId: tab.windowId,
-      windowType: windowMap.get(tab.windowId) || "unknown",
-      index: tab.index,
-      active: tab.active,
-      pinned: tab.pinned,
-    }));
+    const data = filteredTabs.map((tab) => {
+      const common = {
+        title: tab.title,
+        url: tab.url,
+        index: tab.index,
+        active: tab.active,
+        pinned: tab.pinned,
+      };
+      if (!capabilities.supportsWindows) return common;
+      return {
+        ...common,
+        windowId: tab.windowId,
+        windowType: windowMap.get(tab.windowId) || "unknown",
+      };
+    });
     ExportUtils.exportJson(`tabs_${ExportUtils.dateStamp()}.json`, data);
   });
 
-  // Initial load
   try {
     await reload();
   } catch (error) {
     console.error("Error loading tabs:", error);
-    showError(error.message);
+    showMessage(`Error: ${error.message}`);
   }
 });

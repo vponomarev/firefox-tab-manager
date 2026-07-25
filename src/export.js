@@ -25,8 +25,12 @@
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.hidden = true;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    // Firefox Android can begin the download asynchronously after the click.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // headers: string[]; rows: Array<Array<string|number>>

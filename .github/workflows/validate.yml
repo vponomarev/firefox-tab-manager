@@ -1,0 +1,42 @@
+name: Validate extension
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check JavaScript syntax
+        run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+
+      - name: Run unit tests
+        run: node --test tests/*.test.js
+
+      - name: Validate manifest JSON
+        run: node -e "JSON.parse(require('node:fs').readFileSync('src/manifest.json', 'utf8'))"
+
+      - name: Run Mozilla extension linter
+        run: npx --yes web-ext@10.5.0 lint --source-dir src --output text --no-input
+
+      - name: Build extension package
+        run: ./build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firefox-tab-manager-0.4
+          path: firefox-tab-manager.zip
+          if-no-files-found: error

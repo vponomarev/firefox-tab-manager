@@ -4,6 +4,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   const countInfo = document.getElementById("countInfo");
   const exportCsvBtn = document.getElementById("exportCsv");
   const exportJsonBtn = document.getElementById("exportJson");
+  const openVisitsBtn = document.getElementById("openVisits");
+  const capabilities = await Platform.getCapabilities();
+
+  if (capabilities.isAndroid) {
+    document.documentElement.classList.add("android");
+  }
+
+  if (!capabilities.supportsHistory) {
+    tbody.replaceChildren();
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 3;
+    cell.className = "empty";
+    cell.textContent =
+      "Firefox browsing history is unavailable on Android. Use Tracked pages instead.";
+    row.appendChild(cell);
+    tbody.appendChild(row);
+    countInfo.textContent = "Unavailable on this platform";
+    filterInput.disabled = true;
+    exportCsvBtn.disabled = true;
+    exportJsonBtn.disabled = true;
+    openVisitsBtn.hidden = false;
+    openVisitsBtn.addEventListener("click", () =>
+      browser.tabs.create({ url: browser.runtime.getURL("visits.html") }),
+    );
+    return;
+  }
 
   let allHistory = [];
   let filteredHistory = [];
@@ -76,6 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Title
       const tdTitle = document.createElement("td");
+      tdTitle.dataset.label = "Title";
       let title = item.title || "(no title)";
       if (title.length > 450) title = title.substring(0, 450) + "…";
       const titleSpan = document.createElement("span");
@@ -86,6 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // URL
       const tdUrl = document.createElement("td");
+      tdUrl.dataset.label = "URL";
       let url = item.url || "";
       if (url.length > 450) url = url.substring(0, 450) + "…";
       const urlSpan = document.createElement("span");
@@ -96,6 +125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Date/time
       const tdDate = document.createElement("td");
+      tdDate.dataset.label = "Visited";
       const date = new Date(item.lastVisitTime);
       tdDate.className = "date";
       tdDate.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;

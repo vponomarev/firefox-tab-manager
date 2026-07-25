@@ -7,7 +7,7 @@ visited**, that stays in sync across the user's devices — going well beyond
 Firefox's built-in history (whose `history.search` is capped to the last 24h by
 default and can't be reliably searched long-term).
 
-## Current state (v0.3)
+## Current state (v0.4)
 
 - Background tracker records non-private HTTP(S) pages into IndexedDB
   (`background.js` + `storage.js`), keyed by URL with `firstVisit` /
@@ -16,6 +16,9 @@ default and can't be reliably searched long-term).
   delete, clear, CSV/JSON export).
 - Tabs list with live refresh; history viewer (up to 5,000 entries across the
   full time range); close-duplicates.
+- Firefox for Android support through capability detection, a mobile tab list,
+  responsive tracked-page cards, and Android-specific History fallback.
+- Automated syntax, unit, manifest, lint, and package checks in GitHub Actions.
 
 The storage schema is intentionally sync-friendly: URL is a stable id and
 `lastVisit` gives a natural ordering for last-write-wins merges.
@@ -52,7 +55,7 @@ quota, far too small for a page log).
   Kept MV2 for now because a persistent background page suits continuous
   tracking; MV3 needs the tracker restructured to survive worker suspension.
 - Localization via `_locales` + `i18n.getMessage` (currently English-only).
-- Automated checks in CI (`web-ext lint`, `node --check`).
+- Expand automated Android integration coverage beyond capability-unit tests.
 
 ---
 
@@ -108,4 +111,5 @@ Phase 2 — sync
 Phase 3 — polish
 - [ ] Migrate to Manifest V3
 - [ ] `_locales` localization
-- [ ] CI (`web-ext lint`, `node --check`)
+- [x] CI (`web-ext lint`, `node --check`, unit tests, package build)
+- [ ] Automated Firefox Android integration tests

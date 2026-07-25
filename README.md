@@ -1,15 +1,15 @@
 # Firefox Tab & History Manager
 
 A Firefox extension to manage open tabs, browse history, and keep a searchable
-log of visited pages.
+log of visited pages on Firefox Desktop and Firefox for Android.
 
 ## Features
 
 - **Close duplicates** — close duplicate tabs in the current window (keeps the
   last one, skips pinned tabs).
-- **Show all tabs** — a full-page table of every open tab across all windows,
-  with live updates, filtering, click-to-focus, per-tab close, and CSV/JSON
-  export.
+- **Show all tabs** — a responsive view of open tabs, with live updates,
+  filtering, click-to-focus, per-tab close, and CSV/JSON export. Desktop Firefox
+  groups tabs by window; Android uses a mobile card layout.
 - **History** — a searchable view of up to 5,000 Firefox history entries across
   the full time range (not just the last 24h), with CSV/JSON export.
 - **Tracked pages** — the extension's own log of visited pages, recorded in the
@@ -17,6 +17,9 @@ log of visited pages.
   title, URL, first/last visit timestamps and a visit counter. Searchable,
   paginated, exportable, with per-entry delete and "clear all". Private-window
   pages are never tracked.
+
+Firefox's built-in History API is desktop-only. On Android, **Tracked pages**
+provides the searchable history experience instead.
 
 ## Why a separate visit log?
 
@@ -44,8 +47,17 @@ No data leaves the browser (`data_collection_permissions: none`).
 2. Click **Load Temporary Add-on**
 3. Select `src/manifest.json`
 
+For Android development, connect a device or emulator with ADB and run:
+
+```sh
+npx --yes web-ext@10.5.0 run --target firefox-android --source-dir src
+```
+
 ## Build
 
 ```sh
-./build.sh   # produces firefox-tab-manager.zip from src/
+./build.sh   # produces firefox-tab-manager.zip from src/ via web-ext
 ```
+
+The package contains `manifest.json` at the archive root and can be submitted
+to AMO for signing.

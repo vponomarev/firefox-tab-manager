@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Tab & History Manager",
-  "version": "0.3",
+  "version": "0.4",
   "author": "Vitaliy Ponomarev",
   "homepage_url": "https://github.com/vponomarev/firefox-tab-manager",
   "description": "Manage tabs, browse history, and keep a searchable log of visited pages",
@@ -17,7 +17,8 @@
       "data_collection_permissions": {
         "required": ["none"]
       }
-    }
+    },
+    "gecko_android": {}
   },
   "browser_action": {
     "default_popup": "popup.html",

@@ -100,6 +100,7 @@
             }
 
             .close-btn {
+                min-height: 44px;
                 padding: 6px 10px;
                 background: #e74c3c;
                 color: white;
@@ -119,6 +120,57 @@
                 color: #888;
                 font-style: italic;
             }
+
+            @media (max-width: 900px) {
+                .controls > div {
+                    flex: 1 1 100% !important;
+                }
+                .controls button {
+                    width: 100%;
+                    min-height: 44px;
+                }
+                .container {
+                    height: auto;
+                    overflow: visible;
+                    padding: 10px;
+                }
+                table,
+                tbody {
+                    display: block;
+                }
+                thead {
+                    display: none;
+                }
+                tbody tr {
+                    display: block;
+                    margin-bottom: 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                tbody td {
+                    display: flex;
+                    width: 100% !important;
+                    gap: 12px;
+                    text-align: left !important;
+                    border-bottom: 1px solid #eee;
+                }
+                tbody td::before {
+                    content: attr(data-label);
+                    flex: 0 0 24%;
+                    font-weight: 600;
+                    color: #555;
+                }
+                tbody td.empty {
+                    display: block;
+                }
+                tbody td.empty::before {
+                    content: none;
+                }
+                .close-btn {
+                    width: 100%;
+                }
+            }
         </style>
     </head>
     <body>
@@ -126,6 +178,7 @@
 
         <!-- Filter panel and counter -->
         <div
+            class="controls"
             style="
                 padding: 15px;
                 background: #f9f9f9;
@@ -195,7 +248,7 @@
                     <tr>
                         <th>Title</th>
                         <th>URL</th>
-                        <th>Window</th>
+                        <th id="windowHeader">Window</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -207,6 +260,7 @@
             </table>
         </div>
         <script src="export.js"></script>
+        <script src="platform.js"></script>
         <script src="list.js"></script>
     </body>
 </html>

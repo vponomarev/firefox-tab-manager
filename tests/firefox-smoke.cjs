@@ -3,6 +3,8 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const os = require("node:os");
 const http = require("node:http");
+const { execFileSync } = require("node:child_process");
+const isAndroid = process.env.FIREFOX_ANDROID === "1";
 (async () => {
   const root = path.resolve(__dirname, "..");
   const temporary = await fs.mkdtemp(
@@ -26,6 +28,7 @@ const http = require("node:http");
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const origin = "http://127.0.0.1:" + server.address().port;
+  if (isAndroid) execFileSync(process.env.ADB_BINARY || "adb", ["-s", process.env.ANDROID_SERIAL || "emulator-5554", "reverse", "tcp:" + server.address().port, "tcp:" + server.address().port]);
   for (const entry of await fs.readdir(path.join(root, "src"), {
     withFileTypes: true,
   })) {
@@ -48,7 +51,7 @@ const http = require("node:http");
  const checks=[];
  const assert=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
- async function wait(predicate){for(let i=0;i<100;i++){if(await predicate())return;await sleep(100);}throw Error('Timed out');}
+ async function wait(predicate){for(let i=0;i<300;i++){if(await predicate())return;await sleep(100);}throw Error('Timed out');}
  async function frame(page){const f=document.createElement('iframe');f.style.width='375px';f.style.height='800px';document.body.append(f);
   const loaded=new Promise(r=>f.onload=r);f.src=browser.runtime.getURL(page);await loaded;return f;}
  try{
@@ -95,7 +98,8 @@ const http = require("node:http");
           (process.platform === "win32"
             ? "C:/Program Files/Mozilla Firefox/firefox.exe"
             : "firefox"),
-        args: ["-headless"],
+        args: isAndroid ? undefined : ["-headless"],
+        ...(isAndroid ? { target: ["firefox-android"], firefoxApk: "org.mozilla.firefox", adbDevice: process.env.ANDROID_SERIAL || "emulator-5554", adbBin: process.env.ADB_BINARY || "adb" } : {}),
         noReload: true,
         noInput: true,
         pref: ["browser.shell.checkDefaultBrowser=false"],
@@ -107,7 +111,7 @@ const http = require("node:http");
       new Promise((_, reject) => {
         timer = setTimeout(
           () => reject(Error("Firefox smoke timed out")),
-          45000,
+          isAndroid ? 120000 : 45000,
         );
       }),
     ]);

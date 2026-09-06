@@ -1,0 +1,43 @@
+name: Android integration
+
+on:
+  push:
+    branches: ["feat/firefox-android-support"]
+    paths: ["src/**", "tests/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Download official Firefox Android 142 (minimum supported version)
+        run: curl --fail --location --retry 3 https://archive.mozilla.org/pub/fenix/releases/142.0/android/fenix-142.0-android-x86_64/fenix-142.0.multi.android-x86_64.apk --output "$RUNNER_TEMP/firefox.apk"
+      - name: Enable KVM for the disposable emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          disable-animations: true
+          script: bash tests/android-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-test-diagnostics
+          path: android-diagnostics/
+          if-no-files-found: ignore

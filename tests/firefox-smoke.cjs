@@ -26,7 +26,7 @@ const adb = (...args) => execFileSync(process.env.ADB_BINARY || 'adb', ['-s', pr
           await fs.writeFile('android-diagnostics/download-window.xml',xml);
           const dom=new JSDOM(xml,{contentType:'application/xml'});
           for(const node of dom.window.document.querySelectorAll('node')){
-            if(!['Download','ALLOW','Allow'].includes(node.getAttribute('text')))continue;
+            if(!['Download','ALLOW','Allow','Export smoke test',kind === 'json' ? 'Export JSON' : 'Export CSV'].includes(node.getAttribute('text')))continue;
             const bounds=node.getAttribute('bounds').match(/[0-9]+/g).map(Number);
             adb('shell','input','tap',String(Math.floor((bounds[0]+bounds[2])/2)),String(Math.floor((bounds[1]+bounds[3])/2)));
             console.log('Accepted Android download dialog: '+node.getAttribute('text'));
@@ -61,7 +61,7 @@ const adb = (...args) => execFileSync(process.env.ADB_BINARY || 'adb', ['-s', pr
   manifest.background.scripts.push('smoke-driver.js');
   await fs.writeFile(path.join(temporary,'manifest.json'),JSON.stringify(manifest));
   const driver=await fs.readFile(path.join(__dirname,'smoke-driver.js'),'utf8');
-  await fs.writeFile(path.join(temporary,'smoke-export.html'), '<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><title>Export smoke test</title><h1>Export smoke test</h1><script src="export.js"></script><script src="smoke-export.js"></script>');
+  await fs.writeFile(path.join(temporary,'smoke-export.html'), '<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><title>Export smoke test</title><h1>Export smoke test</h1><button id="json">Export JSON</button><button id="csv">Export CSV</button><script src="export.js"></script><script src="smoke-export.js"></script>');
   await fs.writeFile(path.join(temporary,'smoke-export.js'), 'const ORIGIN='+JSON.stringify(origin)+';\n'+await fs.readFile(path.join(__dirname,'smoke-export.js'),'utf8'));
   const webExt=(await import('web-ext')).default;
   let runner,timer;

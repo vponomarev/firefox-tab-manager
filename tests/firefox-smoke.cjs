@@ -28,7 +28,7 @@ const adb = (...args) => execFileSync(process.env.ADB_BINARY || 'adb', ['-s', pr
           for(const node of dom.window.document.querySelectorAll('node')){
             const text=node.getAttribute('text');
             const recent=text==='Export smoke test' && node.getAttribute('resource-id')==='recent.tab.title';
-            if(!recent && !['Download','ALLOW','Allow',kind === 'json' ? 'Export JSON' : 'Export CSV'].includes(text))continue;
+            if(!recent && !['DOWNLOAD','Download','ALLOW','Allow',kind === 'json' ? 'Export JSON' : 'Export CSV'].includes(text))continue;
             const bounds=node.getAttribute('bounds').match(/[0-9]+/g).map(Number);
             adb('shell','input','tap',String(Math.floor((bounds[0]+bounds[2])/2)),String(Math.floor((bounds[1]+bounds[3])/2)));
             console.log('Accepted Android download dialog: '+node.getAttribute('text'));

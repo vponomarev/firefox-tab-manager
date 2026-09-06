@@ -72,9 +72,10 @@ For a connected Android device or configured emulator:
 npx web-ext run --target firefox-android --source-dir src --android-device DEVICE_ID
 ```
 
-Before public Android distribution, test installation, navigation/reload,
-background/restart persistence, duplicate closing, search, deletion and CSV/JSON
-downloads on a device. No Android device/emulator was available for the 0.5
-local checks; simulated API tests and responsive-layout checks do not replace it.
+The Android integration workflow runs Firefox 142.0 on a disposable Android 10
+emulator. It checks real navigation/reload, duplicate closing, responsive layout,
+search, pagination, deletion, CSV/JSON downloads and persistence after a process
+restart, including recovery of an interrupted write. Setup is restricted to CI
+and must not run on a personal device. Signed installation still requires AMO.
 
 See [RELEASE-0.5.md](RELEASE-0.5.md) for release status and remaining checks.

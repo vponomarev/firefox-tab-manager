@@ -26,7 +26,8 @@ The storage schema is intentionally sync-friendly: URL is a stable id and
 ---
 
 - Version 0.5 adds container-safe duplicate closing, durable retries, late-title updates,
-  explicit retention and regression tests. Android device validation remains pending.
+  explicit retention and regression tests. Firefox Android 142 integration checks
+  pass on an Android 10 emulator, including downloads and process restart.
 
 ## Phase 1 — Full-text search over the local log
 
@@ -58,7 +59,7 @@ quota, far too small for a page log).
   Kept MV2 for now because a persistent background page suits continuous
   tracking; MV3 needs the tracker restructured to survive worker suspension.
 - Localization via `_locales` + `i18n.getMessage` (currently English-only).
-- Expand automated Android integration coverage beyond capability-unit tests.
+- Extend Android integration coverage to additional OS and Firefox versions.
 
 ---
 
@@ -115,4 +116,4 @@ Phase 3 — polish
 - [ ] Migrate to Manifest V3
 - [ ] `_locales` localization
 - [x] CI (`web-ext lint`, `node --check`, unit tests, package build)
-- [ ] Automated Firefox Android integration tests
+- [x] Automated Firefox Android integration tests

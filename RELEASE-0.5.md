@@ -21,15 +21,18 @@ One package for Firefox Desktop 140+ and Firefox for Android 142+.
 - Mozilla web-ext lint: passed; compatibility warnings, if any, are documented below.
 - Real Firefox Desktop 152.0.4 in an isolated headless profile: navigation, reload,
   late title, visit deletion, tab rendering and 375px card layout passed.
-- Android device/emulator test: pending; none was available on the build machine.
+- Real Firefox Android 142.0 on a disposable Android 10 (API 29) emulator: passed.
+  Navigation/reload, late titles, responsive cards, search, pagination, tab rendering,
+  duplicate closing, deletion and actual CSV/JSON downloads were checked.
+  After process restart, IndexedDB persisted and the queued visit replayed exactly
+  once with its original timestamp. Clear removed the complete log.
+  Evidence: https://github.com/vponomarev/firefox-tab-manager/actions/runs/34030576676
 - AMO signing: pending. The ZIP is an unsigned upload archive.
 
 ## Before public distribution
 
-1. On Firefox Android 142+, test installation, duplicate closing, tab activation,
-   filtering, pagination, deletion, CSV/JSON downloads, and persistence after restart.
-2. Upload dist/firefox-tab-manager-0.5.zip to AMO for review/signing.
-3. Attach the resulting signed XPI to the release and publish it.
+1. Upload dist/firefox-tab-manager-0.5.zip to AMO for review/signing.
+2. Attach the resulting signed XPI to the release and publish it.
 
 Pending writes survive restart only after browser.storage.local accepts them.
 If both stores are unavailable, keep Firefox open until the visible error clears.

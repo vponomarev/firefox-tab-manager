@@ -68,10 +68,30 @@ const adb = (...args) => execFileSync(process.env.ADB_BINARY || 'adb', ['-s', pr
   const options={sourceDir:temporary,artifactsDir:temporary,noReload:true,noInput:true,
     ...(android ? {target:['firefox-android'],firefoxApk:'org.mozilla.firefox',adbDevice:process.env.ANDROID_SERIAL||'emulator-5554',adbBin:process.env.ADB_BINARY||'adb'} :
     {firefox:process.env.FIREFOX_BINARY||(process.platform==='win32'?'C:/Program Files/Mozilla Firefox/firefox.exe':'firefox'),args:['-headless']})};
+  async function dismissAddonNotice(){
+    for(let i=0;i<10;i++){
+      try{
+        adb('shell','uiautomator','dump','/sdcard/addon-window.xml');
+        const xml=adb('shell','cat','/sdcard/addon-window.xml');
+        const dom=new JSDOM(xml,{contentType:'application/xml'});
+        const nodes=Array.from(dom.window.document.querySelectorAll('node'));
+        const added=nodes.some(n=>n.getAttribute('text')==='Tab & History Manager was added');
+        const button=nodes.find(n=>n.getAttribute('resource-id')==='org.mozilla.firefox:id/confirm_button' && n.getAttribute('text')==='OK');
+        if(added && button){
+          const bounds=button.getAttribute('bounds').match(/[0-9]+/g).map(Number);
+          adb('shell','input','tap',String(Math.floor((bounds[0]+bounds[2])/2)),String(Math.floor((bounds[1]+bounds[3])/2)));
+          dom.window.close();console.log('Dismissed extension-added notice');return;
+        }
+        dom.window.close();
+      }catch(_){}
+      await new Promise(resolve=>setTimeout(resolve,200));
+    }
+  }
   async function runPhase(phase,pendingTimestamp){
     const result=new Promise(resolve=>finish=resolve);
     await fs.writeFile(path.join(temporary,'smoke-driver.js'),'const SMOKE='+JSON.stringify({origin,android,phase,pendingTimestamp})+';\n'+driver);
     runner=await webExt.cmd.run(options,{shouldExitProgram:false});
+    if(android)await dismissAddonNotice();
     try{
       const outcome=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Firefox smoke timed out')),android?180000:60000);})]);
       console.log(JSON.stringify({phase,...outcome},null,2));

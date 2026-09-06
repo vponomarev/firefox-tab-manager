@@ -1,129 +1,68 @@
-// Runs the production extension plus a test driver in a disposable Firefox profile.
-const fs = require("node:fs/promises");
-const path = require("node:path");
-const os = require("node:os");
-const http = require("node:http");
-const { execFileSync } = require("node:child_process");
-const isAndroid = process.env.FIREFOX_ANDROID === "1";
+// Desktop uses an isolated profile. Android uses the disposable CI emulator only.
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const os = require('node:os');
+const http = require('node:http');
+const {execFileSync} = require('node:child_process');
+const android = process.env.FIREFOX_ANDROID === '1';
+const adb = (...args) => execFileSync(process.env.ADB_BINARY || 'adb', ['-s', process.env.ANDROID_SERIAL || 'emulator-5554', ...args], {encoding:'utf8'});
 (async () => {
-  const root = path.resolve(__dirname, "..");
-  const temporary = await fs.mkdtemp(
-    path.join(os.tmpdir(), "tab-manager-smoke-"),
-  );
+  const root = path.resolve(__dirname,'..');
+  const temporary = await fs.mkdtemp(path.join(os.tmpdir(),'tab-manager-smoke-'));
   let finish;
-  const result = new Promise((resolve) => (finish = resolve));
-  const server = http.createServer(async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    if (req.url === "/result") {
-      let body = "";
-      for await (const chunk of req) body += chunk;
-      finish(JSON.parse(body));
-      res.end("ok");
-      return;
+  async function verifyDownloads() {
+    for (let i=0;i<60;i++) {
+      try {
+        const json=adb('shell','cat','/sdcard/Download/smoke-android.json');
+        const csv=adb('shell','cat','/sdcard/Download/smoke-android.csv');
+        if (JSON.parse(json)[0].title==='Android export' && csv.includes("'=1+1")) return {ok:true};
+      } catch (_) { /* The Android download service is asynchronous. */ }
+      await new Promise(resolve=>setTimeout(resolve,250));
     }
-    res.setHeader("Content-Type", "text/html");
-    res.end(
-      '<!doctype html><title>Loading</title><h1>Local test page</h1><script>setTimeout(()=>document.title="Final smoke title",150)</script>',
-    );
+    return {ok:false,files:adb('shell','ls','-l','/sdcard/Download')};
+  }
+  const server=http.createServer(async(req,res)=>{
+    res.setHeader('Access-Control-Allow-Origin','*');
+    if(req.url==='/result'){
+      let body='';for await(const chunk of req) body+=chunk;
+      finish(JSON.parse(body));res.end('ok');return;
+    }
+    if(req.url==='/downloads'){
+      res.end(JSON.stringify(await verifyDownloads()));return;
+    }
+    res.setHeader('Content-Type','text/html');
+    res.end('<!doctype html><title>Loading</title><h1>Local test page</h1><script>setTimeout(()=>document.title="Final smoke title",150)</script>');
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const origin = "http://127.0.0.1:" + server.address().port;
-  if (isAndroid) execFileSync(process.env.ADB_BINARY || "adb", ["-s", process.env.ANDROID_SERIAL || "emulator-5554", "reverse", "tcp:" + server.address().port, "tcp:" + server.address().port]);
-  for (const entry of await fs.readdir(path.join(root, "src"), {
-    withFileTypes: true,
-  })) {
-    if (entry.isFile())
-      await fs.copyFile(
-        path.join(root, "src", entry.name),
-        path.join(temporary, entry.name),
-      );
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const origin='http://127.0.0.1:'+server.address().port;
+  if(android)adb('reverse','tcp:'+server.address().port,'tcp:'+server.address().port);
+  for(const entry of await fs.readdir(path.join(root,'src'),{withFileTypes:true})){
+    if(entry.isFile())await fs.copyFile(path.join(root,'src',entry.name),path.join(temporary,entry.name));
   }
-  const manifest = JSON.parse(
-    await fs.readFile(path.join(temporary, "manifest.json"), "utf8"),
-  );
-  manifest.background.scripts.push("smoke-driver.js");
-  await fs.writeFile(
-    path.join(temporary, "manifest.json"),
-    JSON.stringify(manifest),
-  );
-  const driver = String.raw`
-(async()=>{
- const checks=[];
- const assert=(ok,label)=>{if(!ok)throw Error(label);checks.push(label);};
- const sleep=ms=>new Promise(r=>setTimeout(r,ms));
- async function wait(predicate){for(let i=0;i<300;i++){if(await predicate())return;await sleep(100);}throw Error('Timed out');}
- async function frame(page){const f=document.createElement('iframe');f.style.width='375px';f.style.height='800px';document.body.append(f);
-  const loaded=new Promise(r=>f.onload=r);f.src=browser.runtime.getURL(page);await loaded;return f;}
- try{
-  await VisitStore.initialize();
-  const url=ORIGIN+'/fixture?long='+ 'x'.repeat(400);
-  const tab=await browser.tabs.create({url});
-  await wait(async()=>{const p=await VisitStore.query();return p.items.some(x=>x.url===url&&x.title==='Final smoke title');});
-  let record=(await VisitStore.query()).items.find(x=>x.url===url);
-  assert(record.visitCount===1,'one real navigation is recorded once');
-  await browser.tabs.reload(tab.id);
-  await wait(async()=>{const p=await VisitStore.query();return p.items.find(x=>x.url===url)?.visitCount===2;});
-  await wait(async()=>tracker.status().pending===0 && (await VisitStore.query()).items.find(x=>x.url===url)?.title==='Final smoke title');
-  assert((await VisitStore.query()).items.find(x=>x.url===url).title==='Final smoke title','late title is persisted after reload');
-  const f=await frame('visits.html');
-  await wait(()=>f.contentDocument.querySelector('#visits-body a'));
-  assert(f.contentWindow.getComputedStyle(f.contentDocument.querySelector('tbody')).display==='block','375px layout uses cards');
-  assert(f.contentDocument.documentElement.scrollWidth<=f.contentDocument.documentElement.clientWidth,'375px page has no horizontal overflow');
-  const list=await frame('list.html');
-  await wait(()=>list.contentDocument.querySelector('#tabs-body .title'));
-  assert(list.contentDocument.querySelectorAll('#tabs-body .title').length>=1,'real tabs list renders');
-  await tracker.remove(url);
-  assert(!(await VisitStore.query()).items.some(x=>x.url===url),'deletion removes the record');
-  await browser.tabs.remove(tab.id);
-  await fetch(ORIGIN+'/result',{method:'POST',body:JSON.stringify({ok:true,checks,firefox:(await browser.runtime.getBrowserInfo()).version})});
- }catch(error){await fetch(ORIGIN+'/result',{method:'POST',body:JSON.stringify({ok:false,checks,error:String(error),stack:error.stack})});}
-})();
-`;
-  await fs.writeFile(
-    path.join(temporary, "smoke-driver.js"),
-    "const ORIGIN=" +
-      JSON.stringify(origin) +
-      ";\n".replace("\\n", "\n") +
-      driver,
-  );
-  const webExt = (await import("web-ext")).default;
-  let runner, timer;
-  try {
-    runner = await webExt.cmd.run(
-      {
-        sourceDir: temporary,
-        artifactsDir: temporary,
-        firefox:
-          process.env.FIREFOX_BINARY ||
-          (process.platform === "win32"
-            ? "C:/Program Files/Mozilla Firefox/firefox.exe"
-            : "firefox"),
-        args: isAndroid ? undefined : ["-headless"],
-        ...(isAndroid ? { target: ["firefox-android"], firefoxApk: "org.mozilla.firefox", adbDevice: process.env.ANDROID_SERIAL || "emulator-5554", adbBin: process.env.ADB_BINARY || "adb" } : {}),
-        noReload: true,
-        noInput: true,
-        pref: ["browser.shell.checkDefaultBrowser=false"],
-      },
-      { shouldExitProgram: false },
-    );
-    const outcome = await Promise.race([
-      result,
-      new Promise((_, reject) => {
-        timer = setTimeout(
-          () => reject(Error("Firefox smoke timed out")),
-          isAndroid ? 120000 : 45000,
-        );
-      }),
-    ]);
-    console.log(JSON.stringify(outcome, null, 2));
-    if (!outcome.ok) process.exitCode = 1;
-  } finally {
-    clearTimeout(timer);
-    if (runner) await runner.exit();
-    server.close();
-    // Keep the temporary test source for diagnosis; Firefox uses its own disposable profile.
+  const manifest=JSON.parse(await fs.readFile(path.join(temporary,'manifest.json'),'utf8'));
+  manifest.background.scripts.push('smoke-driver.js');
+  await fs.writeFile(path.join(temporary,'manifest.json'),JSON.stringify(manifest));
+  const driver=await fs.readFile(path.join(__dirname,'smoke-driver.js'),'utf8');
+  const webExt=(await import('web-ext')).default;
+  let runner,timer;
+  const options={sourceDir:temporary,artifactsDir:temporary,noReload:true,noInput:true,
+    ...(android ? {target:['firefox-android'],firefoxApk:'org.mozilla.firefox',adbDevice:process.env.ANDROID_SERIAL||'emulator-5554',adbBin:process.env.ADB_BINARY||'adb'} :
+    {firefox:process.env.FIREFOX_BINARY||(process.platform==='win32'?'C:/Program Files/Mozilla Firefox/firefox.exe':'firefox'),args:['-headless']})};
+  async function runPhase(phase,pendingTimestamp){
+    const result=new Promise(resolve=>finish=resolve);
+    await fs.writeFile(path.join(temporary,'smoke-driver.js'),'const SMOKE='+JSON.stringify({origin,android,phase,pendingTimestamp})+';\n'+driver);
+    runner=await webExt.cmd.run(options,{shouldExitProgram:false});
+    try{
+      const outcome=await Promise.race([result,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Firefox smoke timed out')),android?180000:60000);})]);
+      console.log(JSON.stringify({phase,...outcome},null,2));
+      if(!outcome.ok)throw Error(outcome.error);
+      return outcome;
+    } finally {clearTimeout(timer);await runner.exit();runner=undefined;}
   }
-})().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+  try{
+    const first=await runPhase('initial');
+    if(android)await runPhase('resume',first.pendingTimestamp);
+  }finally{
+    if(runner)await runner.exit();server.close();
+  }
+})().catch(error=>{console.error(error);process.exitCode=1;});

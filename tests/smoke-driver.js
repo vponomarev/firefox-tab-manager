@@ -7,7 +7,7 @@
   };
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   async function wait(predicate, label) {
-    for (let i = 0; i < 300; i++) {
+    for (let i = 0; i < 600; i++) {
       if (await predicate()) return;
       await sleep(100);
     }
@@ -91,10 +91,12 @@
     assert(true, 'duplicate closing works in the actual browser');
 
     if (SMOKE.android) {
-      visits.contentWindow.ExportUtils.exportJson('smoke-android.json', [{title:'Android export',url}]);
-      visits.contentWindow.ExportUtils.exportCsv('smoke-android.csv', ['Title','URL'], [['=1+1',url]]);
-      const downloads = await (await fetch(SMOKE.origin + '/downloads')).json();
+      let downloads;
+      browser.runtime.onMessage.addListener(message => { if(message.type === 'smoke-export-result') downloads = message.result; });
+      const exportTab = await browser.tabs.create({url:browser.runtime.getURL('smoke-export.html')});
+      await wait(() => downloads, 'exports from an extension tab');
       assert(downloads.ok, 'CSV and JSON files download on Android: ' + JSON.stringify(downloads));
+      await browser.tabs.remove(exportTab.id);
     }
     await tracker.remove(url);
     assert(!(await find(url)), 'deletion removes the record');

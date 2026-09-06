@@ -1,63 +1,80 @@
 # Firefox Tab & History Manager
 
-A Firefox extension to manage open tabs, browse history, and keep a searchable
-log of visited pages on Firefox Desktop and Firefox for Android.
+Manage tabs and keep a searchable local visit log on **Firefox Desktop 140+**
+and **Firefox for Android 142+**. Version **0.5** uses the same package on both.
 
 ## Features
 
-- **Close duplicates** — close duplicate tabs in the current window (keeps the
-  last one, skips pinned tabs).
-- **Show all tabs** — a responsive view of open tabs, with live updates,
-  filtering, click-to-focus, per-tab close, and CSV/JSON export. Desktop Firefox
-  groups tabs by window; Android uses a mobile card layout.
-- **History** — a searchable view of up to 5,000 Firefox history entries across
-  the full time range (not just the last 24h), with CSV/JSON export.
-- **Tracked pages** — the extension's own log of visited pages, recorded in the
-  background into a transactional IndexedDB database. Each entry keeps the
-  title, URL, first/last visit timestamps and a visit counter. Searchable,
-  paginated, exportable, with per-entry delete and "clear all". Private-window
-  pages are never tracked.
+- **Close duplicates** keeps the last unpinned occurrence of each URL within
+  its Firefox container. Pinned, private and unknown-container desktop tabs
+  are left alone. Desktop operates in the current window; Android in all tabs.
+- **Show all tabs** has filtering, live updates (including moves between
+  windows), click-to-focus, per-tab close, and CSV/JSON export.
+- **History** searches and exports up to 5,000 Firefox history entries across
+  the full time range. Firefox History integration is desktop-only.
+- **Tracked pages** records non-private HTTP(S) pages into IndexedDB, with
+  first/last visit timestamps, visit counts, title/URL search and pagination.
+  Titles that change after loading are updated without counting another visit.
+- Android uses responsive cards, touch controls and 50 records per page.
+  Its Tracked pages view works without the desktop history/windows APIs.
 
-Firefox's built-in History API is desktop-only. On Android, **Tracked pages**
-provides the searchable history experience instead.
+## Storage and privacy
 
-## Why a separate visit log?
+Pages are retained **until you delete them**. The old 50,000-URL automatic
+removal has been removed. Previously deleted records cannot be recovered.
+Export regularly: local storage is not a backup and available disk space is finite.
 
-Firefox's `history` API is limited (e.g. `history.search` defaults to the last
-24 hours). The background tracker (`background.js` + `storage.js`) maintains an
-independent, persistent log so pages can be searched later. The store is keyed
-by URL and carries timestamps, which is the groundwork for planned features.
+The visit log is separate from Firefox History: clearing either one does not
+clear the other. Private-window pages and non-HTTP(S) pages are not recorded.
+No browsing data is transmitted outside the browser.
 
-## Roadmap
+Pending changes are saved in `browser.storage.local` before writing to IndexedDB.
+Failed writes retry after 1, 5 and 30 seconds, then pause with a visible error
+and a **Retry saving** button in the popup and Tracked pages. Saved pending
+changes resume on restart; replay does not double-count visits. If the browser
+cannot write the pending queue itself, changes remain in memory: keep Firefox
+open until saving succeeds. Delete/Clear also cancel matching pending changes.
 
-Full-text search over the visit log and self-hosted cross-device sync — see
-[ROADMAP.md](ROADMAP.md) for the plan, phases, and sync server design.
+Permissions remain `tabs`, `history` and `storage`; no new permissions are added.
+The data-collection declaration remains `none`.
 
-## Permissions
+## Development and build
 
-- `tabs` — enumerate/close/focus tabs.
-- `history` — read Firefox browsing history.
-- `storage` — persist the visit log locally.
-
-No data leaves the browser (`data_collection_permissions: none`).
-
-## Development install
-
-1. Open `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on**
-3. Select `src/manifest.json`
-
-For Android development, connect a device or emulator with ADB and run:
+Node.js 24 is required. From the repository root:
 
 ```sh
-npx --yes web-ext@10.5.0 run --target firefox-android --source-dir src
+npm ci
+npm test
+npm run lint
+npm run build
 ```
 
-## Build
+The upload package is `dist/firefox-tab-manager-0.5.zip`, with `manifest.json`
+at its root. It is an **unsigned AMO upload archive**, not a signed installation
+package. For regular Firefox installations, submit it to AMO and obtain a
+signed XPI. Both desktop and Android use that signed package.
+
+For a temporary desktop install, open `about:debugging#/runtime/this-firefox`,
+choose **Load Temporary Add-on** and select `src/manifest.json`.
+
+## Validation
+
+`npm test` covers containers, tracking, migration, more than 50,000 records,
+crash replay, retries, deletion races and desktop/Android UI paths.
+
+`npm run test:firefox` runs a real Firefox Desktop smoke test using a temporary
+profile and local fixture server. Set `FIREFOX_BINARY` if Firefox is not at the
+default path. The test does not access the user's profile.
+
+For a connected Android device or configured emulator:
 
 ```sh
-./build.sh   # produces firefox-tab-manager.zip from src/ via web-ext
+npx web-ext run --target firefox-android --source-dir src --android-device DEVICE_ID
 ```
 
-The package contains `manifest.json` at the archive root and can be submitted
-to AMO for signing.
+Before public Android distribution, test installation, navigation/reload,
+background/restart persistence, duplicate closing, search, deletion and CSV/JSON
+downloads on a device. No Android device/emulator was available for the 0.5
+local checks; simulated API tests and responsive-layout checks do not replace it.
+
+See [RELEASE-0.5.md](RELEASE-0.5.md) for release status and remaining checks.

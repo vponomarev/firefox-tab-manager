@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Close duplicate tabs, keeping the last occurrence of each URL.
   closeDuplicatesBtn.addEventListener("click", async () => {
+    closeDuplicatesBtn.disabled = true;
     status.textContent = "Searching for duplicates...";
 
     try {
@@ -40,6 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const tab = tabs[i];
         if (
           !tab.url ||
+          tab.incognito ||
           tab.pinned ||
           tab.url.startsWith("about:") ||
           tab.url.startsWith("chrome://")
@@ -47,10 +49,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           continue;
         }
 
-        if (urlSet.has(tab.url)) {
+        // Unknown desktop identities must never be merged. Android does not
+        // have containers; all its regular tabs share the default store.
+        const identity = tab.cookieStoreId ||
+          (capabilities.isAndroid ? "default" : `unknown-${tab.id}`);
+        const key = JSON.stringify([identity, tab.url]);
+        if (urlSet.has(key)) {
           duplicates.push(tab.id);
         } else {
-          urlSet.add(tab.url);
+          urlSet.add(key);
         }
       }
 
@@ -63,6 +70,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (error) {
       console.error(error);
       status.textContent = "❌ Error";
+    } finally {
+      closeDuplicatesBtn.disabled = false;
     }
   });
 });

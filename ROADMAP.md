@@ -7,7 +7,7 @@ visited**, that stays in sync across the user's devices — going well beyond
 Firefox's built-in history (whose `history.search` is capped to the last 24h by
 default and can't be reliably searched long-term).
 
-## Current state (v0.4)
+## Current state (v0.5)
 
 - Background tracker records non-private HTTP(S) pages into IndexedDB
   (`background.js` + `storage.js`), keyed by URL with `firstVisit` /
@@ -24,6 +24,9 @@ The storage schema is intentionally sync-friendly: URL is a stable id and
 `lastVisit` gives a natural ordering for last-write-wins merges.
 
 ---
+
+- Version 0.5 adds container-safe duplicate closing, durable retries, late-title updates,
+  explicit retention and regression tests. Android device validation remains pending.
 
 ## Phase 1 — Full-text search over the local log
 

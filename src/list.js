@@ -16,18 +16,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   let allTabs = [];
   let filteredTabs = [];
   let windowMap = new Map();
+  let reloadGeneration = 0;
 
   async function reload() {
+    const generation = ++reloadGeneration;
+    let nextWindowMap = new Map();
     if (capabilities.supportsWindows) {
       const windows = await browser.windows.getAll();
-      windowMap = new Map(
+      nextWindowMap = new Map(
         windows.map((win) => [win.id, win.incognito ? "Private" : "Common"]),
       );
-    } else {
-      windowMap = new Map();
     }
 
-    allTabs = await browser.tabs.query({});
+    const tabs = await browser.tabs.query({});
+    if (generation !== reloadGeneration) return;
+    windowMap = nextWindowMap;
+    allTabs = tabs;
     allTabs.sort((a, b) => {
       if (capabilities.supportsWindows && a.windowId !== b.windowId) {
         return a.windowId - b.windowId;
@@ -72,9 +76,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const activateTab = async () => {
         try {
-          await browser.tabs.update(tab.id, { active: true });
+          const activeTab = await browser.tabs.update(tab.id, { active: true });
           if (capabilities.supportsWindows) {
-            await browser.windows.update(tab.windowId, { focused: true });
+            await browser.windows.update(activeTab.windowId, { focused: true });
           }
         } catch (error) {
           console.error("Error activating tab:", error);
@@ -173,6 +177,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     browser.tabs.onRemoved,
     browser.tabs.onUpdated,
     browser.tabs.onMoved,
+    browser.tabs.onAttached,
+    browser.tabs.onDetached,
+    browser.tabs.onActivated,
   ]) {
     if (event && typeof event.addListener === "function") {
       event.addListener(scheduleReload);

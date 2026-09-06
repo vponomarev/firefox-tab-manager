@@ -219,9 +219,15 @@
                 }
             }
         </style>
+        <link rel="stylesheet" href="shared.css" />
     </head>
     <body>
         <h1>Visited pages</h1>
+        <p class="retention-note">Pages are kept until you delete them; there is no automatic expiry. This local log is separate from Firefox History. Export regularly for a backup.</p>
+        <div id="trackingStatus" class="tracking-status" role="status" hidden>
+            <div id="trackingMessage"></div>
+            <button id="retryTracking">Retry saving</button>
+        </div>
 
         <div class="controls">
             <input
@@ -261,5 +267,6 @@
         <script src="export.js"></script>
         <script src="platform.js"></script>
         <script src="visits.js"></script>
+        <script src="tracking-status.js"></script>
     </body>
 </html>

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - "feat/**"
+      - "codex/**"
   pull_request:
 
 permissions:
@@ -15,28 +16,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-
+          cache: npm
+      - run: npm ci --ignore-scripts
       - name: Check JavaScript syntax
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
-
-      - name: Run unit tests
-        run: node --test tests/*.test.js
-
+      - run: npm test
       - name: Validate manifest JSON
         run: node -e "JSON.parse(require('node:fs').readFileSync('src/manifest.json', 'utf8'))"
-
-      - name: Run Mozilla extension linter
-        run: npx --yes web-ext@10.5.0 lint --source-dir src --output text --no-input
-
-      - name: Build extension package
-        run: ./build.sh
-
+      - run: npm run lint
+      - run: npm run build
       - uses: actions/upload-artifact@v4
         with:
-          name: firefox-tab-manager-0.4
-          path: firefox-tab-manager.zip
+          name: firefox-tab-manager-0.5
+          path: dist/firefox-tab-manager-0.5.zip
           if-no-files-found: error

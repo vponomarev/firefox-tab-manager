@@ -1,0 +1,16 @@
+{
+  "name": "firefox-tab-history-manager",
+  "version": "0.5.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "lint": "web-ext lint --source-dir src --output text --no-input",
+    "build": "web-ext build --source-dir src --artifacts-dir dist --filename firefox-tab-manager-0.5.zip --overwrite-dest",
+    "test:firefox": "node tests/firefox-smoke.cjs"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.5",
+    "jsdom": "30.0.1",
+    "web-ext": "10.5.0"
+  }
+}

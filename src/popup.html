@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TAB control</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             width: 400px;
             max-width: 100%;
@@ -97,6 +98,7 @@
             width: 100%;
         }
     </style>
+    <link rel="stylesheet" href="shared.css" />
 </head>
 <body>
 <h3>TAB control</h3>
@@ -107,7 +109,12 @@
     <button id="openVisits">📚 Tracked pages</button>
 </div>
 <p id="status"></p>
+<div id="trackingStatus" class="tracking-status" role="status" hidden>
+    <div id="trackingMessage"></div>
+    <button id="retryTracking">Retry saving</button>
+</div>
 <script src="platform.js"></script>
 <script src="popup.js"></script>
+<script src="tracking-status.js"></script>
 </body>
 </html>

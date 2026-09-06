@@ -18,6 +18,22 @@ function shouldTrack(url) {
 // event clears the value so an explicit reload counts as another visit.
 const lastRecorded = new Map(); // tabId -> url
 
+const tracker = VisitTracker.create({
+  store: VisitStore,
+  storage: browser.storage.local,
+  onChange: async (status) => {
+    try {
+      if (browser.browserAction && browser.browserAction.setBadgeText) {
+        await browser.browserAction.setBadgeText({ text: status.failed ? "!" : "" });
+        await browser.browserAction.setBadgeBackgroundColor({ color: "#b42318" });
+      }
+    } catch (_error) {
+      // Badge APIs are optional on mobile; the in-page status must still update.
+    }
+    await notifyVisitStoreChanged();
+  },
+});
+
 function notifyVisitStoreChanged() {
   return browser.runtime
     .sendMessage({ type: "visit-store-changed" })
@@ -29,15 +45,17 @@ async function handleUpdated(tabId, changeInfo, tab) {
     lastRecorded.delete(tabId);
     return;
   }
-  if (changeInfo.status !== "complete") return;
   const url = tab && tab.url;
   if (!tab || tab.incognito || !shouldTrack(url)) return;
+  if (changeInfo.title && lastRecorded.get(tabId) === url) {
+    await tracker.enqueue("title", { url, title: tab.title }).catch(console.error);
+  }
+  if (changeInfo.status !== "complete") return;
   if (lastRecorded.get(tabId) === url) return;
 
   lastRecorded.set(tabId, url);
   try {
-    await VisitStore.record({ url, title: tab.title });
-    await notifyVisitStoreChanged();
+    await tracker.enqueue("record", { url, title: tab.title });
   } catch (err) {
     if (lastRecorded.get(tabId) === url) {
       lastRecorded.delete(tabId);
@@ -52,6 +70,7 @@ function handleRemoved(tabId) {
 
 browser.tabs.onUpdated.addListener(handleUpdated);
 browser.tabs.onRemoved.addListener(handleRemoved);
+tracker.start();
 
 // Initialize migration eagerly. Each store operation retries initialization if
 // this first attempt fails.
@@ -68,9 +87,14 @@ browser.runtime.onMessage.addListener((message) => {
     case "getAll":
       return VisitStore.getAll(message.text);
     case "remove":
-      return VisitStore.remove(message.url).then(notifyVisitStoreChanged);
+      if (typeof message.url !== "string") return Promise.reject(new Error("URL required"));
+      return tracker.remove(message.url);
     case "clear":
-      return VisitStore.clear().then(notifyVisitStoreChanged);
+      return tracker.remove();
+    case "status":
+      return Promise.resolve(tracker.status());
+    case "retry":
+      return tracker.retry();
     default:
       return Promise.reject(
         new Error(`Unknown VisitStore action: ${message.action}`),

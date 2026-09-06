@@ -11,7 +11,6 @@
   const STORE_NAME = "visits";
   const LAST_VISIT_INDEX = "lastVisit";
   const LEGACY_STORAGE_KEY = "vt_visits_v1";
-  const MAX_ENTRIES = 50000;
 
   let databasePromise;
   let initializationPromise;
@@ -48,7 +47,11 @@
       };
       request.onsuccess = () => {
         const database = request.result;
-        database.onversionchange = () => database.close();
+        database.onversionchange = () => {
+          database.close();
+          databasePromise = undefined;
+        };
+        database.onclose = () => { databasePromise = undefined; };
         resolve(database);
       };
       request.onerror = () => reject(request.error);
@@ -104,7 +107,7 @@
     return initializationPromise;
   }
 
-  async function record({ url, title }, now) {
+  async function record({ url, title }, now, operationId) {
     if (!url) return;
     await initialize();
 
@@ -114,10 +117,17 @@
     const store = transaction.objectStore(STORE_NAME);
     const existing = await requestResult(store.get(url));
 
+    if (operationId && existing && existing.lastOperationId === operationId) {
+      await transactionDone(transaction);
+      return;
+    }
+
     if (existing) {
-      existing.lastVisit = timestamp;
+      existing.lastVisit = Math.max(existing.lastVisit, timestamp);
+      existing.firstVisit = Math.min(existing.firstVisit, timestamp);
       existing.visitCount = (existing.visitCount || 0) + 1;
       if (title) existing.title = title;
+      existing.lastOperationId = operationId;
       store.put(existing);
     } else {
       store.add({
@@ -126,28 +136,24 @@
         firstVisit: timestamp,
         lastVisit: timestamp,
         visitCount: 1,
+        lastOperationId: operationId,
       });
     }
 
-    const count = await requestResult(store.count());
-    if (count > MAX_ENTRIES) {
-      let remaining = count - MAX_ENTRIES;
-      await new Promise((resolve, reject) => {
-        const cursorRequest = store.index(LAST_VISIT_INDEX).openCursor();
-        cursorRequest.onerror = () => reject(cursorRequest.error);
-        cursorRequest.onsuccess = () => {
-          const cursor = cursorRequest.result;
-          if (!cursor || remaining <= 0) {
-            resolve();
-            return;
-          }
-          cursor.delete();
-          remaining -= 1;
-          cursor.continue();
-        };
-      });
-    }
+    await transactionDone(transaction);
+  }
 
+  async function updateTitle({ url, title }) {
+    if (!url || !title) return;
+    await initialize();
+    const database = await openDatabase();
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    const existing = await requestResult(store.get(url));
+    if (existing && existing.title !== title) {
+      existing.title = title;
+      store.put(existing);
+    }
     await transactionDone(transaction);
   }
 
@@ -266,5 +272,5 @@
     await transactionDone(transaction);
   }
 
-  global.VisitStore = { initialize, record, query, getAll, remove, clear };
+  global.VisitStore = { initialize, record, updateTitle, query, getAll, remove, clear };
 })(this);

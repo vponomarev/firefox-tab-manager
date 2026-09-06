@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TAB control</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             width: 400px;
             max-width: 100%;
@@ -36,6 +37,7 @@
         button {
             flex: 1;
             min-width: 100px;
+            min-height: 44px;
             padding: 10px 12px;
             font-size: 14px;
             font-weight: 500;
@@ -81,7 +83,22 @@
             border-radius: 6px;
             border: 1px solid #dce2e8;
         }
+
+        html.android body {
+            width: auto;
+            max-width: none;
+            min-height: 100vh;
+        }
+
+        html.android .buttons {
+            flex-direction: column;
+        }
+
+        html.android button {
+            width: 100%;
+        }
     </style>
+    <link rel="stylesheet" href="shared.css" />
 </head>
 <body>
 <h3>TAB control</h3>
@@ -92,6 +109,12 @@
     <button id="openVisits">📚 Tracked pages</button>
 </div>
 <p id="status"></p>
+<div id="trackingStatus" class="tracking-status" role="status" hidden>
+    <div id="trackingMessage"></div>
+    <button id="retryTracking">Retry saving</button>
+</div>
+<script src="platform.js"></script>
 <script src="popup.js"></script>
+<script src="tracking-status.js"></script>
 </body>
 </html>

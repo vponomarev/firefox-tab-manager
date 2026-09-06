@@ -1,6 +1,5 @@
 #!/bin/sh
+set -eu
 
-rm ./firefox-tab-manager.zip
-cd src
-zip -r ../firefox-tab-manager.zip *
-cd ..
+cd "$(dirname "$0")"
+npm run build

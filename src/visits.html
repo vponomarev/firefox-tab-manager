@@ -48,6 +48,7 @@
             }
             .controls button {
                 padding: 8px 12px;
+                min-height: 44px;
                 font-size: 14px;
                 border: none;
                 border-radius: 4px;
@@ -148,6 +149,7 @@
                 white-space: nowrap;
             }
             .close-btn {
+                min-height: 44px;
                 padding: 6px 10px;
                 background: #e74c3c;
                 color: white;
@@ -165,10 +167,67 @@
                 color: #888;
                 font-style: italic;
             }
+
+            @media (max-width: 900px) {
+                .controls > * {
+                    flex: 1 1 100%;
+                }
+                .controls button {
+                    width: 100%;
+                }
+                .container {
+                    height: auto;
+                    overflow: visible;
+                    padding: 10px;
+                }
+                table,
+                tbody {
+                    display: block;
+                }
+                thead {
+                    display: none;
+                }
+                tbody tr {
+                    display: block;
+                    margin-bottom: 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                tbody td {
+                    display: flex;
+                    width: 100% !important;
+                    gap: 12px;
+                    text-align: left !important;
+                    border-bottom: 1px solid #eee;
+                    white-space: normal !important;
+                }
+                tbody td::before {
+                    content: attr(data-label);
+                    flex: 0 0 28%;
+                    font-weight: 600;
+                    color: #555;
+                }
+                tbody td.empty {
+                    display: block;
+                }
+                tbody td.empty::before {
+                    content: none;
+                }
+                .close-btn {
+                    width: 100%;
+                }
+            }
         </style>
+        <link rel="stylesheet" href="shared.css" />
     </head>
     <body>
         <h1>Visited pages</h1>
+        <p class="retention-note">Pages are kept until you delete them; there is no automatic expiry. This local log is separate from Firefox History. Export regularly for a backup.</p>
+        <div id="trackingStatus" class="tracking-status" role="status" hidden>
+            <div id="trackingMessage"></div>
+            <button id="retryTracking">Retry saving</button>
+        </div>
 
         <div class="controls">
             <input
@@ -206,6 +265,8 @@
         </div>
 
         <script src="export.js"></script>
+        <script src="platform.js"></script>
         <script src="visits.js"></script>
+        <script src="tracking-status.js"></script>
     </body>
 </html>

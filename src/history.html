@@ -48,6 +48,7 @@
             }
             .controls button {
                 padding: 8px 12px;
+                min-height: 44px;
                 font-size: 14px;
                 border: none;
                 border-radius: 4px;
@@ -59,6 +60,10 @@
             }
             .controls #exportJson {
                 background: #3498db;
+                color: white;
+            }
+            .controls #openVisits {
+                background: #27ae60;
                 color: white;
             }
             .container {
@@ -123,7 +128,55 @@
                 color: #888;
                 font-style: italic;
             }
+
+            @media (max-width: 900px) {
+                .controls > * {
+                    flex: 1 1 100%;
+                }
+                .controls button {
+                    width: 100%;
+                }
+                .container {
+                    height: auto;
+                    overflow: visible;
+                    padding: 10px;
+                }
+                table,
+                tbody {
+                    display: block;
+                }
+                thead {
+                    display: none;
+                }
+                tbody tr {
+                    display: block;
+                    margin-bottom: 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                tbody td {
+                    display: flex;
+                    width: 100% !important;
+                    gap: 12px;
+                    border-bottom: 1px solid #eee;
+                    white-space: normal;
+                }
+                tbody td::before {
+                    content: attr(data-label);
+                    flex: 0 0 28%;
+                    font-weight: 600;
+                    color: #555;
+                }
+                tbody td.empty {
+                    display: block;
+                }
+                tbody td.empty::before {
+                    content: none;
+                }
+            }
         </style>
+        <link rel="stylesheet" href="shared.css" />
     </head>
     <body>
         <h1>Browsing history</h1>
@@ -137,6 +190,7 @@
             <div id="countInfo" class="count">Loading...</div>
             <button id="exportCsv">📄 Export CSV</button>
             <button id="exportJson">📦 Export JSON</button>
+            <button id="openVisits" hidden>📚 Open Tracked pages</button>
         </div>
 
         <div class="container">
@@ -157,6 +211,7 @@
         </div>
 
         <script src="export.js"></script>
+        <script src="platform.js"></script>
         <script src="history.js"></script>
     </body>
 </html>

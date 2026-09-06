@@ -8,3 +8,7 @@ firefox-tab-manager.zip
 
 # OS
 .DS_Store
+
+# Development dependencies and release output
+node_modules/
+dist/
